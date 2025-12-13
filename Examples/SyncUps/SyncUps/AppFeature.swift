@@ -8,6 +8,7 @@ struct AppFeature {
     case detail(SyncUpDetail)
     case meeting(Meeting, syncUp: SyncUp)
     case record(RecordMeeting)
+    case stopwatch(Stopwatch)
   }
 
   @ObservableState
@@ -63,6 +64,8 @@ struct AppView: View {
         MeetingView(meeting: meeting, syncUp: syncUp)
       case let .record(store):
         RecordMeetingView(store: store)
+      case let .stopwatch(store):
+        StopwatchView(store: store)
       }
     }
   }

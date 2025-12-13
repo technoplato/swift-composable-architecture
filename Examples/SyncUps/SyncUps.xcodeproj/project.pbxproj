@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		944753622EED4E2A00C611DF /* Stopwatch.swift in Sources */ = {isa = PBXBuildFile; fileRef = 944753612EED4E2A00C611DF /* Stopwatch.swift */; };
 		DC7CE4E729E9E6E4006B6263 /* ding.wav in Resources */ = {isa = PBXBuildFile; fileRef = DC7CE4E629E9E6E4006B6263 /* ding.wav */; };
 		DC808D7329E9C3AC0072B4A9 /* App.swift in Sources */ = {isa = PBXBuildFile; fileRef = DC808D7229E9C3AC0072B4A9 /* App.swift */; };
 		DC808D7729E9C3AD0072B4A9 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = DC808D7629E9C3AD0072B4A9 /* Assets.xcassets */; };
@@ -47,6 +48,7 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		944753612EED4E2A00C611DF /* Stopwatch.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Stopwatch.swift; sourceTree = "<group>"; };
 		DC43064F2AE8CF7C005AFB1E /* SyncUps.xctestplan */ = {isa = PBXFileReference; lastKnownFileType = text; path = SyncUps.xctestplan; sourceTree = "<group>"; };
 		DC7CE4E629E9E6E4006B6263 /* ding.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = ding.wav; sourceTree = "<group>"; };
 		DC808D6F29E9C3AC0072B4A9 /* SyncUps.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SyncUps.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -139,6 +141,7 @@
 				DC808DAA29E9C51D0072B4A9 /* Meeting.swift */,
 				DC808DAC29E9C52A0072B4A9 /* Models.swift */,
 				DC808DAE29E9C53E0072B4A9 /* RecordMeeting.swift */,
+				944753612EED4E2A00C611DF /* Stopwatch.swift */,
 				DC808DB029E9C54A0072B4A9 /* SyncUpDetail.swift */,
 				DC808DA829E9C5090072B4A9 /* SyncUpForm.swift */,
 				DC808DB229E9C5540072B4A9 /* SyncUpsList.swift */,
@@ -325,6 +328,7 @@
 				DC808DA729E9C4D60072B4A9 /* SpeechRecognizer.swift in Sources */,
 				DC80B1E929EDE5D1001CC0CC /* AppFeature.swift in Sources */,
 				DC808DA529E9C4C70072B4A9 /* OpenSettings.swift in Sources */,
+				944753622EED4E2A00C611DF /* Stopwatch.swift in Sources */,
 				DC808DAD29E9C52A0072B4A9 /* Models.swift in Sources */,
 				DC808DB129E9C54A0072B4A9 /* SyncUpDetail.swift in Sources */,
 				DC808D7329E9C3AC0072B4A9 /* App.swift in Sources */,
@@ -495,7 +499,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = VFRXY8HC3H;
+				DEVELOPMENT_TEAM = 4EC72DECN9;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "To transcribe meeting notes.";
@@ -523,7 +527,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = VFRXY8HC3H;
+				DEVELOPMENT_TEAM = 4EC72DECN9;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "To transcribe meeting notes.";

@@ -62,3 +62,56 @@ some key additions:
 [tagged-gh]: http://github.com/pointfreeco/swift-tagged
 [identified-collections-gh]: http://github.com/pointfreeco/swift-identified-collections 
 [dependencies-gh]: http://github.com/pointfreeco/swift-dependencies 
+
+---
+
+## Local Modifications (toolshed fork)
+
+This copy of the SyncUps example has been modified from the upstream Point-Free repository
+to experiment with additional TCA patterns. These changes are **not** part of the official
+swift-composable-architecture examples.
+
+### 1. Draft Sync-Up Status Feature
+
+**Files modified:** `Models.swift`, `SyncUpsList.swift`, `SyncUpDetail.swift`
+
+Added a `Status` enum to `SyncUp` with three states: `draft`, `active`, `archived`.
+
+**Key changes:**
+- New sync-ups are created immediately as drafts when tapping "+"
+- Drafts remain in the list even if the form is dismissed without saving
+- "Save" button activates the sync-up (changes status from draft → active)
+- Detail view shows status badge and provides Activate/Archive/Unarchive actions
+- Meetings can only be started from active sync-ups
+- Activation validates that at least one attendee has a name (shows alert + opens form with focus if not)
+
+**Patterns demonstrated:**
+- Adding domain state to existing models
+- Conditional UI based on status
+- Validation with user-friendly error handling and focus management
+
+### 2. Stopwatch Feature with Shared State
+
+**Files added:** `Stopwatch.swift`
+**Files modified:** `AppFeature.swift`, `SyncUpsList.swift`
+
+Added a global stopwatch accessible from the home screen and via navigation.
+
+**Key changes:**
+- `StopwatchState` model persisted via `@Shared(.stopwatch)` to file storage
+- Stopwatch card on home screen using `TimelineView` for live updates (no reducer needed)
+- Full stopwatch screen in navigation stack with TCA reducer for timer management
+- Play/pause from both card and full screen, reset only from full screen
+
+**Patterns demonstrated:**
+- `@Shared` with file storage key for app-wide persistent state
+- Multiple views reading/writing same shared state independently
+- `TimelineView` as alternative to TCA timer effects for simple display updates
+- Using `.task { await store.send(.onAppear).finish() }` instead of `onAppear`/`onDisappear`
+  to avoid "action for missing element" errors in navigation stacks
+
+**Architecture notes:**
+- The card uses `@Shared` directly in the view (no reducer) with `TimelineView` for updates
+- The full screen uses a TCA reducer with timer effects for more complex interactions
+- Both operate on the same underlying `@Shared(.stopwatch)` state
+- This demonstrates that `@Shared` with a key can be declared independently in multiple places

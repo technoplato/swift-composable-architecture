@@ -22,10 +22,10 @@ struct SyncUpsList {
 
   enum Action {
     case addSyncUpButtonTapped
-    case confirmAddSyncUpButtonTapped
     case destination(PresentationAction<Destination.Action>)
     case dismissAddSyncUpButtonTapped
     case onDelete(IndexSet)
+    case saveSyncUpButtonTapped
   }
 
   @Dependency(\.uuid) var uuid
@@ -34,28 +34,14 @@ struct SyncUpsList {
     Reduce { state, action in
       switch action {
       case .addSyncUpButtonTapped:
-        state.destination = .add(
-          SyncUpForm.State(
-            syncUp: SyncUp(id: SyncUp.ID(uuid()))
-          )
+        let newSyncUp = SyncUp(
+          id: SyncUp.ID(uuid()),
+          attendees: [Attendee(id: Attendee.ID(uuid()))]
         )
-        return .none
-
-      case .confirmAddSyncUpButtonTapped:
-        guard case let .some(.add(editState)) = state.destination
-        else { return .none }
-        var syncUp = editState.syncUp
-        syncUp.attendees.removeAll { attendee in
-          attendee.name.allSatisfy(\.isWhitespace)
-        }
-        if syncUp.attendees.isEmpty {
-          syncUp.attendees.append(
-            editState.syncUp.attendees.first
-              ?? Attendee(id: Attendee.ID(uuid()))
-          )
-        }
-        state.$syncUps.withLock { _ = $0.append(syncUp) }
-        state.destination = nil
+        state.$syncUps.withLock { _ = $0.append(newSyncUp) }
+        state.destination = .add(
+          SyncUpForm.State(syncUp: newSyncUp)
+        )
         return .none
 
       case .destination:
@@ -68,6 +54,24 @@ struct SyncUpsList {
       case let .onDelete(indexSet):
         state.$syncUps.withLock { $0.remove(atOffsets: indexSet) }
         return .none
+
+      case .saveSyncUpButtonTapped:
+        guard case let .some(.add(editState)) = state.destination
+        else { return .none }
+        var syncUp = editState.syncUp
+        syncUp.attendees.removeAll { attendee in
+          attendee.name.allSatisfy(\.isWhitespace)
+        }
+        if syncUp.attendees.isEmpty {
+          syncUp.attendees.append(
+            editState.syncUp.attendees.first
+              ?? Attendee(id: Attendee.ID(uuid()))
+          )
+        }
+        syncUp.status = .active
+        state.$syncUps.withLock { $0[id: syncUp.id] = syncUp }
+        state.destination = nil
+        return .none
       }
     }
     .ifLet(\.$destination, action: \.destination)
@@ -77,24 +81,44 @@ extension SyncUpsList.Destination.State: Equatable {}
 
 struct SyncUpsListView: View {
   @Bindable var store: StoreOf<SyncUpsList>
+  @Shared(.stopwatch) var stopwatchState
 
   var body: some View {
     List {
-      ForEach(Array(store.$syncUps)) { $syncUp in
-        NavigationLink(state: AppFeature.Path.State.detail(SyncUpDetail.State(syncUp: $syncUp))) {
-          CardView(syncUp: syncUp)
+      Section {
+        NavigationLink(state: AppFeature.Path.State.stopwatch(Stopwatch.State())) {
+          StopwatchListCard(stopwatch: $stopwatchState)
         }
-        .listRowBackground(syncUp.theme.mainColor)
+        .listRowBackground(Color(.systemBackground))
+        .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
       }
-      .onDelete { indexSet in
-        store.send(.onDelete(indexSet))
+
+      Section {
+        ForEach(Array(store.$syncUps)) { $syncUp in
+          NavigationLink(state: AppFeature.Path.State.detail(SyncUpDetail.State(syncUp: $syncUp))) {
+            CardView(syncUp: syncUp)
+          }
+          .listRowBackground(syncUp.theme.mainColor)
+        }
+        .onDelete { indexSet in
+          store.send(.onDelete(indexSet))
+        }
+      } header: {
+        Text("Sync-ups")
       }
     }
     .toolbar {
-      Button {
-        store.send(.addSyncUpButtonTapped)
-      } label: {
-        Image(systemName: "plus")
+      ToolbarItem(placement: .navigationBarLeading) {
+        NavigationLink(state: AppFeature.Path.State.stopwatch(Stopwatch.State())) {
+          Image(systemName: "stopwatch")
+        }
+      }
+      ToolbarItem(placement: .navigationBarTrailing) {
+        Button {
+          store.send(.addSyncUpButtonTapped)
+        } label: {
+          Image(systemName: "plus")
+        }
       }
     }
     .navigationTitle("Daily Sync-ups")
@@ -111,8 +135,8 @@ struct SyncUpsListView: View {
               }
             }
             ToolbarItem(placement: .confirmationAction) {
-              Button("Add") {
-                store.send(.confirmAddSyncUpButtonTapped)
+              Button("Save") {
+                store.send(.saveSyncUpButtonTapped)
               }
             }
           }
@@ -126,8 +150,12 @@ struct CardView: View {
 
   var body: some View {
     VStack(alignment: .leading) {
-      Text(syncUp.title)
-        .font(.headline)
+      HStack {
+        Text(syncUp.title)
+          .font(.headline)
+        Spacer()
+        StatusBadge(status: syncUp.status)
+      }
       Spacer()
       HStack {
         Label("\(syncUp.attendees.count)", systemImage: "person.3")
@@ -139,6 +167,47 @@ struct CardView: View {
     }
     .padding()
     .foregroundColor(syncUp.theme.accentColor)
+  }
+}
+
+struct StatusBadge: View {
+  let status: SyncUp.Status
+
+  var body: some View {
+    Text(status.label)
+      .font(.caption2)
+      .fontWeight(.medium)
+      .padding(.horizontal, 6)
+      .padding(.vertical, 2)
+      .background(status.backgroundColor)
+      .foregroundColor(status.foregroundColor)
+      .cornerRadius(4)
+  }
+}
+
+extension SyncUp.Status {
+  var label: String {
+    switch self {
+    case .draft: return "Draft"
+    case .active: return "Active"
+    case .archived: return "Archived"
+    }
+  }
+
+  var backgroundColor: Color {
+    switch self {
+    case .draft: return .yellow.opacity(0.3)
+    case .active: return .green.opacity(0.3)
+    case .archived: return .gray.opacity(0.3)
+    }
+  }
+
+  var foregroundColor: Color {
+    switch self {
+    case .draft: return .orange
+    case .active: return .green
+    case .archived: return .gray
+    }
   }
 }
 
