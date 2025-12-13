@@ -17,6 +17,7 @@ struct SyncUpsList {
   @ObservableState
   struct State: Equatable {
     @Presents var destination: Destination.State?
+    @Shared(.favoriteStopwatchID) var favoriteStopwatchID
     @Shared(.stopwatches) var stopwatches
     @Shared(.syncUps) var syncUps
   }
@@ -66,6 +67,21 @@ struct SyncUpsList {
         return .none
 
       case let .onDeleteStopwatch(indexSet):
+        // Handle favorite cleanup if deleting the favorite
+        for index in indexSet {
+          let deletedID = state.stopwatches[index].id
+          if state.favoriteStopwatchID == deletedID {
+            // Auto-select next
+            var nextID: StopwatchItem.ID? = nil
+            if index + 1 < state.stopwatches.count {
+              nextID = state.stopwatches[index + 1].id
+            } else if index > 0 {
+              nextID = state.stopwatches[index - 1].id
+            }
+            state.$favoriteStopwatchID.withLock { $0 = nextID }
+            break
+          }
+        }
         state.$stopwatches.withLock { $0.remove(atOffsets: indexSet) }
         return .none
 

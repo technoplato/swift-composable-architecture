@@ -30,6 +30,14 @@ extension SharedKey where Self == FileStorageKey<IdentifiedArrayOf<StopwatchItem
   }
 }
 
+// MARK: - Shared Key for Favorite Stopwatch ID
+
+extension SharedKey where Self == FileStorageKey<StopwatchItem.ID?>.Default {
+  static var favoriteStopwatchID: Self {
+    Self[.fileStorage(.documentsDirectory.appending(component: "favorite-stopwatch-id.json")), default: nil]
+  }
+}
+
 // MARK: - Stopwatch Detail Reducer
 
 @Reducer
@@ -59,8 +67,26 @@ struct StopwatchDetail {
     Reduce { state, action in
       switch action {
       case .deleteButtonTapped:
+        let deletedID = state.stopwatch.id
         @Shared(.stopwatches) var stopwatches
-        $stopwatches.withLock { _ = $0.remove(id: state.stopwatch.id) }
+        @Shared(.favoriteStopwatchID) var favoriteStopwatchID
+
+        // If deleting the favorite, auto-select next
+        if favoriteStopwatchID == deletedID {
+          let currentIndex = stopwatches.firstIndex(where: { $0.id == deletedID })
+          var nextID: StopwatchItem.ID? = nil
+
+          if let index = currentIndex {
+            if index + 1 < stopwatches.count {
+              nextID = stopwatches[index + 1].id
+            } else if index > 0 {
+              nextID = stopwatches[index - 1].id
+            }
+          }
+          $favoriteStopwatchID.withLock { $0 = nextID }
+        }
+
+        $stopwatches.withLock { _ = $0.remove(id: deletedID) }
         return .run { _ in await dismiss() }
 
       case .onAppear:
@@ -230,6 +256,11 @@ struct StopwatchDisplay: View {
 
 struct StopwatchCard: View {
   @Shared var stopwatch: StopwatchItem
+  @Shared(.favoriteStopwatchID) var favoriteStopwatchID
+
+  private var isFavorite: Bool {
+    favoriteStopwatchID == stopwatch.id
+  }
 
   var body: some View {
     TimelineView(.animation(minimumInterval: 0.01, paused: !stopwatch.isRunning)) { context in
@@ -250,6 +281,17 @@ struct StopwatchCard: View {
         HStack {
           StopwatchCardDisplay(milliseconds: currentMs)
           Spacer()
+
+          // Favorite button
+          Button {
+            setAsFavorite()
+          } label: {
+            Image(systemName: isFavorite ? "star.fill" : "star")
+              .font(.system(size: 24))
+              .foregroundColor(isFavorite ? .yellow : .secondary)
+          }
+          .buttonStyle(.plain)
+
           Button {
             toggleStopwatch()
           } label: {
@@ -262,6 +304,10 @@ struct StopwatchCard: View {
       }
       .padding()
     }
+  }
+
+  private func setAsFavorite() {
+    $favoriteStopwatchID.withLock { $0 = stopwatch.id }
   }
 
   private func toggleStopwatch() {
@@ -303,6 +349,34 @@ struct StopwatchCardDisplay: View {
 
       Text(String(format: ".%03d", ms))
         .font(.system(size: 18, weight: .medium, design: .monospaced))
+        .foregroundColor(.secondary)
+    }
+    .monospacedDigit()
+  }
+}
+
+// MARK: - Compact Widget Display
+
+struct StopwatchWidgetDisplay: View {
+  let milliseconds: Int
+
+  private var hours: Int { milliseconds / 3_600_000 }
+  private var minutes: Int { (milliseconds % 3_600_000) / 60_000 }
+  private var seconds: Int { (milliseconds % 60_000) / 1_000 }
+  private var ms: Int { milliseconds % 1_000 }
+
+  var body: some View {
+    HStack(alignment: .lastTextBaseline, spacing: 0) {
+      if hours > 0 {
+        Text("\(hours):")
+          .font(.system(size: 20, weight: .semibold, design: .monospaced))
+      }
+
+      Text(String(format: "%02d:%02d", minutes, seconds))
+        .font(.system(size: 20, weight: .semibold, design: .monospaced))
+
+      Text(String(format: ".%02d", ms / 10))
+        .font(.system(size: 14, weight: .medium, design: .monospaced))
         .foregroundColor(.secondary)
     }
     .monospacedDigit()

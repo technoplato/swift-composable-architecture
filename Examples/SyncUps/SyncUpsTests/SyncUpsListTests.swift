@@ -22,7 +22,9 @@ struct SyncUpsListTests {
         Attendee(id: Attendee.ID(UUID(1)))
       ]
     )
+    // addSyncUpButtonTapped creates the sync-up immediately as a draft and opens the form
     await store.send(.addSyncUpButtonTapped) {
+      $0.$syncUps.withLock { _ = $0.append(syncUp) }
       $0.destination = .add(SyncUpForm.State(syncUp: syncUp))
     }
 
@@ -31,9 +33,11 @@ struct SyncUpsListTests {
       $0.destination?.modify(\.add) { $0.syncUp.title = "Engineering" }
     }
 
-    await store.send(.confirmAddSyncUpButtonTapped) {
+    // saveSyncUpButtonTapped marks it as active
+    syncUp.status = .active
+    await store.send(.saveSyncUpButtonTapped) {
       $0.destination = nil
-      $0.$syncUps.withLock { $0 = [syncUp] }
+      $0.$syncUps.withLock { $0[id: syncUp.id] = syncUp }
     }
   }
 
@@ -41,20 +45,21 @@ struct SyncUpsListTests {
   func addAndConfirmValidatesAttendees() async throws {
     @Dependency(\.uuid) var uuid
 
+    // The sync-up already exists as a draft (created when add button was tapped)
+    let draftSyncUp = SyncUp(
+      id: SyncUp.ID(uuidString: "deadbeef-dead-beef-dead-beefdeadbeef")!,
+      attendees: [
+        Attendee(id: Attendee.ID(uuid()), name: ""),
+        Attendee(id: Attendee.ID(uuid()), name: "    "),
+      ],
+      title: "Design"
+    )
+
+    @Shared(.syncUps) var syncUps = [draftSyncUp]
+
     let store = TestStore(
       initialState: SyncUpsList.State(
-        destination: .add(
-          SyncUpForm.State(
-            syncUp: SyncUp(
-              id: SyncUp.ID(uuidString: "deadbeef-dead-beef-dead-beefdeadbeef")!,
-              attendees: [
-                Attendee(id: Attendee.ID(uuid()), name: ""),
-                Attendee(id: Attendee.ID(uuid()), name: "    "),
-              ],
-              title: "Design"
-            )
-          )
-        )
+        destination: .add(SyncUpForm.State(syncUp: draftSyncUp))
       )
     ) {
       SyncUpsList()
@@ -62,18 +67,19 @@ struct SyncUpsListTests {
       $0.uuid = .incrementing
     }
 
-    await store.send(.confirmAddSyncUpButtonTapped) {
+    // saveSyncUpButtonTapped validates attendees and marks as active
+    await store.send(.saveSyncUpButtonTapped) {
       $0.destination = nil
       $0.$syncUps.withLock {
-        $0 = [
-          SyncUp(
-            id: SyncUp.ID(uuidString: "deadbeef-dead-beef-dead-beefdeadbeef")!,
-            attendees: [
-              Attendee(id: Attendee.ID(UUID(0)))
-            ],
-            title: "Design"
-          )
-        ]
+        var savedSyncUp = SyncUp(
+          id: SyncUp.ID(uuidString: "deadbeef-dead-beef-dead-beefdeadbeef")!,
+          attendees: [
+            Attendee(id: Attendee.ID(UUID(0)))
+          ],
+          title: "Design"
+        )
+        savedSyncUp.status = .active
+        $0 = [savedSyncUp]
       }
     }
   }
