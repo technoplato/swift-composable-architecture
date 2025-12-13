@@ -17,14 +17,17 @@ struct SyncUpsList {
   @ObservableState
   struct State: Equatable {
     @Presents var destination: Destination.State?
+    @Shared(.stopwatches) var stopwatches
     @Shared(.syncUps) var syncUps
   }
 
   enum Action {
+    case addStopwatchButtonTapped
     case addSyncUpButtonTapped
     case destination(PresentationAction<Destination.Action>)
     case dismissAddSyncUpButtonTapped
-    case onDelete(IndexSet)
+    case onDeleteStopwatch(IndexSet)
+    case onDeleteSyncUp(IndexSet)
     case saveSyncUpButtonTapped
   }
 
@@ -33,6 +36,14 @@ struct SyncUpsList {
   var body: some ReducerOf<Self> {
     Reduce { state, action in
       switch action {
+      case .addStopwatchButtonTapped:
+        let newStopwatch = StopwatchItem(
+          id: StopwatchItem.ID(uuid()),
+          title: "Stopwatch \(state.stopwatches.count + 1)"
+        )
+        state.$stopwatches.withLock { _ = $0.append(newStopwatch) }
+        return .none
+
       case .addSyncUpButtonTapped:
         let newSyncUp = SyncUp(
           id: SyncUp.ID(uuid()),
@@ -51,7 +62,11 @@ struct SyncUpsList {
         state.destination = nil
         return .none
 
-      case let .onDelete(indexSet):
+      case let .onDeleteStopwatch(indexSet):
+        state.$stopwatches.withLock { $0.remove(atOffsets: indexSet) }
+        return .none
+
+      case let .onDeleteSyncUp(indexSet):
         state.$syncUps.withLock { $0.remove(atOffsets: indexSet) }
         return .none
 
@@ -81,16 +96,34 @@ extension SyncUpsList.Destination.State: Equatable {}
 
 struct SyncUpsListView: View {
   @Bindable var store: StoreOf<SyncUpsList>
-  @Shared(.stopwatch) var stopwatchState
 
   var body: some View {
     List {
       Section {
-        NavigationLink(state: AppFeature.Path.State.stopwatch(Stopwatch.State())) {
-          StopwatchListCard(stopwatch: $stopwatchState)
+        ForEach(Array(store.$stopwatches)) { $stopwatch in
+          NavigationLink(
+            state: AppFeature.Path.State.stopwatchDetail(StopwatchDetail.State(stopwatch: $stopwatch))
+          ) {
+            StopwatchCard(stopwatch: $stopwatch)
+          }
+          .listRowBackground(Color(.systemBackground))
         }
-        .listRowBackground(Color(.systemBackground))
-        .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
+        .onDelete { indexSet in
+          store.send(.onDeleteStopwatch(indexSet))
+        }
+
+        Button {
+          store.send(.addStopwatchButtonTapped)
+        } label: {
+          Label("New Stopwatch", systemImage: "plus")
+        }
+      } header: {
+        HStack {
+          Text("Stopwatches")
+          Spacer()
+          Text("\(store.stopwatches.count)")
+            .foregroundColor(.secondary)
+        }
       }
 
       Section {
@@ -101,18 +134,13 @@ struct SyncUpsListView: View {
           .listRowBackground(syncUp.theme.mainColor)
         }
         .onDelete { indexSet in
-          store.send(.onDelete(indexSet))
+          store.send(.onDeleteSyncUp(indexSet))
         }
       } header: {
         Text("Sync-ups")
       }
     }
     .toolbar {
-      ToolbarItem(placement: .navigationBarLeading) {
-        NavigationLink(state: AppFeature.Path.State.stopwatch(Stopwatch.State())) {
-          Image(systemName: "stopwatch")
-        }
-      }
       ToolbarItem(placement: .navigationBarTrailing) {
         Button {
           store.send(.addSyncUpButtonTapped)

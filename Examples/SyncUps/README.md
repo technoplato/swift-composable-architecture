@@ -90,28 +90,31 @@ Added a `Status` enum to `SyncUp` with three states: `draft`, `active`, `archive
 - Conditional UI based on status
 - Validation with user-friendly error handling and focus management
 
-### 2. Stopwatch Feature with Shared State
+### 2. Multiple Stopwatches Feature (List Pattern)
 
 **Files added:** `Stopwatch.swift`
 **Files modified:** `AppFeature.swift`, `SyncUpsList.swift`
 
-Added a global stopwatch accessible from the home screen and via navigation.
+Added support for multiple stopwatches, following the same list/detail pattern as sync-ups.
 
 **Key changes:**
-- `StopwatchState` model persisted via `@Shared(.stopwatch)` to file storage
-- Stopwatch card on home screen using `TimelineView` for live updates (no reducer needed)
-- Full stopwatch screen in navigation stack with TCA reducer for timer management
-- Play/pause from both card and full screen, reset only from full screen
+- `StopwatchItem` model with ID, title, and timer state (Identifiable, Codable)
+- `@Shared(.stopwatches)` for `IdentifiedArrayOf<StopwatchItem>` persisted to file storage
+- Stopwatches section on home screen with cards showing live time via `TimelineView`
+- Play/pause directly on cards without needing a reducer (uses `@Shared` + `TimelineView`)
+- `StopwatchDetail` reducer for full-screen view with reset and delete
+- Navigation from card to detail passes `$stopwatch` binding (same pattern as sync-ups)
 
 **Patterns demonstrated:**
-- `@Shared` with file storage key for app-wide persistent state
-- Multiple views reading/writing same shared state independently
-- `TimelineView` as alternative to TCA timer effects for simple display updates
-- Using `.task { await store.send(.onAppear).finish() }` instead of `onAppear`/`onDisappear`
-  to avoid "action for missing element" errors in navigation stacks
+- `@Shared` with file storage key for app-wide persistent list state
+- `IdentifiedArrayOf` for type-safe collection management
+- Passing `@Shared` bindings through navigation (`$stopwatch`)
+- `TimelineView` as alternative to TCA timer effects for card display updates
+- Using `.task { await store.send(.onAppear).finish() }` to avoid "action for missing element" errors
+- Detail view with delete action that removes from shared list and dismisses
 
 **Architecture notes:**
-- The card uses `@Shared` directly in the view (no reducer) with `TimelineView` for updates
-- The full screen uses a TCA reducer with timer effects for more complex interactions
-- Both operate on the same underlying `@Shared(.stopwatch)` state
-- This demonstrates that `@Shared` with a key can be declared independently in multiple places
+- Cards use `@Shared` directly in the view with `TimelineView` for live updates (no reducer)
+- Detail view uses `StopwatchDetail` reducer with `@Shared var stopwatch: StopwatchItem`
+- Both operate on the same underlying `@Shared(.stopwatches)` array
+- This mirrors how `SyncUpDetail` works with `@Shared var syncUp: SyncUp`

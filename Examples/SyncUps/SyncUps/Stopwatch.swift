@@ -1,9 +1,13 @@
 import ComposableArchitecture
+import IdentifiedCollections
 import SwiftUI
+import Tagged
 
-// MARK: - Stopwatch State Model
+// MARK: - Stopwatch Item Model
 
-struct StopwatchState: Equatable, Codable {
+struct StopwatchItem: Equatable, Identifiable, Codable {
+  let id: Tagged<Self, UUID>
+  var title: String = ""
   var elapsedMilliseconds: Int = 0
   var isRunning: Bool = false
   var lastStartTime: Date?
@@ -18,25 +22,26 @@ struct StopwatchState: Equatable, Codable {
   }
 }
 
-// MARK: - Shared Key
+// MARK: - Shared Key for Stopwatches List
 
-extension SharedKey where Self == FileStorageKey<StopwatchState>.Default {
-  static var stopwatch: Self {
-    Self[.fileStorage(.documentsDirectory.appending(component: "stopwatch.json")), default: StopwatchState()]
+extension SharedKey where Self == FileStorageKey<IdentifiedArrayOf<StopwatchItem>>.Default {
+  static var stopwatches: Self {
+    Self[.fileStorage(.documentsDirectory.appending(component: "stopwatches.json")), default: []]
   }
 }
 
-// MARK: - Stopwatch Reducer
+// MARK: - Stopwatch Detail Reducer
 
 @Reducer
-struct Stopwatch {
+struct StopwatchDetail {
   @ObservableState
   struct State: Equatable {
-    @Shared(.stopwatch) var stopwatch
+    @Shared var stopwatch: StopwatchItem
     var displayMilliseconds: Int = 0
   }
 
   enum Action {
+    case deleteButtonTapped
     case onAppear
     case pauseButtonTapped
     case resetButtonTapped
@@ -46,17 +51,21 @@ struct Stopwatch {
 
   @Dependency(\.continuousClock) var clock
   @Dependency(\.date.now) var now
+  @Dependency(\.dismiss) var dismiss
 
   private enum CancelID { case timer }
 
   var body: some ReducerOf<Self> {
     Reduce { state, action in
       switch action {
+      case .deleteButtonTapped:
+        @Shared(.stopwatches) var stopwatches
+        $stopwatches.withLock { _ = $0.remove(id: state.stopwatch.id) }
+        return .run { _ in await dismiss() }
+
       case .onAppear:
         state.displayMilliseconds = state.stopwatch.currentElapsedMilliseconds(now: now)
         guard state.stopwatch.isRunning else { return .none }
-        // Start timer for this reducer instance
-        // Using .task in the view ensures this effect is cancelled when view disappears
         return .run { send in
           for await _ in clock.timer(interval: .milliseconds(10)) {
             await send(.timerTicked)
@@ -104,10 +113,10 @@ struct Stopwatch {
   }
 }
 
-// MARK: - Stopwatch View
+// MARK: - Stopwatch Detail View
 
-struct StopwatchView: View {
-  let store: StoreOf<Stopwatch>
+struct StopwatchDetailView: View {
+  let store: StoreOf<StopwatchDetail>
 
   var body: some View {
     VStack(spacing: 48) {
@@ -159,9 +168,19 @@ struct StopwatchView: View {
       }
 
       Spacer()
+
+      // Delete button
+      Button(role: .destructive) {
+        store.send(.deleteButtonTapped)
+      } label: {
+        Text("Delete Stopwatch")
+          .frame(maxWidth: .infinity)
+      }
+      .buttonStyle(.bordered)
+      .padding(.horizontal)
     }
     .padding()
-    .navigationTitle("Stopwatch")
+    .navigationTitle(store.stopwatch.title.isEmpty ? "Stopwatch" : store.stopwatch.title)
     .navigationBarTitleDisplayMode(.inline)
     .task { await store.send(.onAppear).finish() }
   }
@@ -207,18 +226,18 @@ struct StopwatchDisplay: View {
   }
 }
 
-// MARK: - Stopwatch List Card (for home screen, uses @Shared directly)
+// MARK: - Stopwatch Card (for list, uses @Shared directly with TimelineView)
 
-struct StopwatchListCard: View {
-  @Shared var stopwatch: StopwatchState
+struct StopwatchCard: View {
+  @Shared var stopwatch: StopwatchItem
 
   var body: some View {
     TimelineView(.animation(minimumInterval: 0.01, paused: !stopwatch.isRunning)) { context in
       let currentMs = stopwatch.currentElapsedMilliseconds(now: context.date)
 
-      VStack(alignment: .leading, spacing: 12) {
+      VStack(alignment: .leading, spacing: 8) {
         HStack {
-          Label("Stopwatch", systemImage: "stopwatch")
+          Text(stopwatch.title.isEmpty ? "Stopwatch" : stopwatch.title)
             .font(.headline)
           Spacer()
           if stopwatch.isRunning {
@@ -235,18 +254,13 @@ struct StopwatchListCard: View {
             toggleStopwatch()
           } label: {
             Image(systemName: stopwatch.isRunning ? "pause.circle.fill" : "play.circle.fill")
-              .font(.system(size: 36))
+              .font(.system(size: 32))
               .foregroundColor(stopwatch.isRunning ? .orange : .green)
           }
           .buttonStyle(.plain)
         }
       }
       .padding()
-      .background(
-        RoundedRectangle(cornerRadius: 12)
-          .fill(Color(.systemBackground))
-          .shadow(color: .black.opacity(0.1), radius: 4, x: 0, y: 2)
-      )
     }
   }
 
@@ -281,36 +295,54 @@ struct StopwatchCardDisplay: View {
     HStack(alignment: .lastTextBaseline, spacing: 0) {
       if hours > 0 {
         Text("\(hours):")
-          .font(.system(size: 32, weight: .medium, design: .monospaced))
+          .font(.system(size: 28, weight: .medium, design: .monospaced))
       }
 
       Text(String(format: "%02d:%02d", minutes, seconds))
-        .font(.system(size: 32, weight: .medium, design: .monospaced))
+        .font(.system(size: 28, weight: .medium, design: .monospaced))
 
       Text(String(format: ".%03d", ms))
-        .font(.system(size: 20, weight: .medium, design: .monospaced))
+        .font(.system(size: 18, weight: .medium, design: .monospaced))
         .foregroundColor(.secondary)
     }
     .monospacedDigit()
   }
 }
 
+// MARK: - Mock Data
+
+extension StopwatchItem {
+  static let mock = Self(
+    id: StopwatchItem.ID(UUID()),
+    title: "Workout",
+    elapsedMilliseconds: 65_432,
+    isRunning: false
+  )
+
+  static let runningMock = Self(
+    id: StopwatchItem.ID(UUID()),
+    title: "Meeting",
+    elapsedMilliseconds: 120_000,
+    isRunning: true,
+    lastStartTime: Date()
+  )
+}
+
 // MARK: - Previews
 
-#Preview("Stopwatch Screen") {
+#Preview("Stopwatch Detail") {
   NavigationStack {
-    StopwatchView(
-      store: Store(initialState: Stopwatch.State()) {
-        Stopwatch()
+    StopwatchDetailView(
+      store: Store(initialState: StopwatchDetail.State(stopwatch: Shared(value: .mock))) {
+        StopwatchDetail()
       }
     )
   }
 }
 
 #Preview("Stopwatch Card") {
-  @Shared(.stopwatch) var stopwatch
-  return StopwatchListCard(stopwatch: $stopwatch)
-    .padding()
-    .background(Color(.systemGroupedBackground))
+  List {
+    StopwatchCard(stopwatch: Shared(value: .mock))
+    StopwatchCard(stopwatch: Shared(value: .runningMock))
+  }
 }
-
