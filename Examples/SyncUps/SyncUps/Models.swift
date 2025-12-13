@@ -7,8 +7,15 @@ struct SyncUp: Equatable, Identifiable, Codable {
   var attendees: IdentifiedArrayOf<Attendee> = []
   var duration: Duration = .seconds(60 * 5)
   var meetings: IdentifiedArrayOf<Meeting> = []
+  var status: Status = .draft
   var theme: Theme = .bubblegum
   var title = ""
+
+  enum Status: String, Equatable, Codable, CaseIterable {
+    case draft
+    case active
+    case archived
+  }
 
   var durationPerAttendee: Duration {
     duration / attendees.count
@@ -87,6 +94,7 @@ extension SyncUp {
           """
       )
     ],
+    status: .active,
     theme: .orange,
     title: "Design"
   )
@@ -98,6 +106,7 @@ extension SyncUp {
       Attendee(id: Attendee.ID(), name: "Blob Jr"),
     ],
     duration: .seconds(60 * 10),
+    status: .active,
     theme: .periwinkle,
     title: "Engineering"
   )
@@ -109,6 +118,7 @@ extension SyncUp {
       Attendee(id: Attendee.ID(), name: "Blob Jr"),
     ],
     duration: .seconds(60 * 30),
+    status: .active,
     theme: .poppy,
     title: "Product"
   )

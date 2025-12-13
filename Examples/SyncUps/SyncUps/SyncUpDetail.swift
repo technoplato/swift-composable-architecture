@@ -12,6 +12,7 @@ struct SyncUpDetail {
     enum Alert {
       case confirmDeletion
       case continueWithoutRecording
+      case needsAttendees
       case openSettings
     }
   }
@@ -23,6 +24,8 @@ struct SyncUpDetail {
   }
 
   enum Action: Sendable {
+    case activateButtonTapped
+    case archiveButtonTapped
     case cancelEditButtonTapped
     case delegate(Delegate)
     case deleteButtonTapped
@@ -31,6 +34,7 @@ struct SyncUpDetail {
     case doneEditingButtonTapped
     case editButtonTapped
     case startMeetingButtonTapped
+    case unarchiveButtonTapped
 
     @CasePathable
     enum Delegate {
@@ -45,6 +49,26 @@ struct SyncUpDetail {
   var body: some ReducerOf<Self> {
     Reduce { state, action in
       switch action {
+      case .activateButtonTapped:
+        // Check if there are any attendees with non-whitespace names
+        let hasValidAttendees = state.syncUp.attendees.contains { attendee in
+          !attendee.name.allSatisfy(\.isWhitespace)
+        }
+        guard hasValidAttendees else {
+          state.destination = .alert(.needsAttendees)
+          return .none
+        }
+        state.$syncUp.withLock { syncUp in
+          // Clean up whitespace-only attendees before activating
+          syncUp.attendees.removeAll { $0.name.allSatisfy(\.isWhitespace) }
+          syncUp.status = .active
+        }
+        return .none
+
+      case .archiveButtonTapped:
+        state.$syncUp.withLock { $0.status = .archived }
+        return .none
+
       case .cancelEditButtonTapped:
         state.destination = nil
         return .none
@@ -70,6 +94,17 @@ struct SyncUpDetail {
         case .continueWithoutRecording:
           return .send(.delegate(.startMeeting(state.$syncUp)))
 
+        case .needsAttendees:
+          // Open edit form with focus on the first attendee field
+          let focusField: SyncUpForm.State.Field? = state.syncUp.attendees.first.map { .attendee($0.id) }
+          state.destination = .edit(
+            SyncUpForm.State(
+              focus: focusField,
+              syncUp: state.syncUp
+            )
+          )
+          return .none
+
         case .openSettings:
           return .run { _ in await openSettings() }
         }
@@ -89,6 +124,7 @@ struct SyncUpDetail {
         return .none
 
       case .startMeetingButtonTapped:
+        guard state.syncUp.status == .active else { return .none }
         switch authorizationStatus() {
         case .notDetermined, .authorized:
           return .send(.delegate(.startMeeting(state.$syncUp)))
@@ -104,6 +140,10 @@ struct SyncUpDetail {
         @unknown default:
           return .none
         }
+
+      case .unarchiveButtonTapped:
+        state.$syncUp.withLock { $0.status = .active }
+        return .none
       }
     }
     .ifLet(\.$destination, action: \.destination)
@@ -117,12 +157,19 @@ struct SyncUpDetailView: View {
   var body: some View {
     Form {
       Section {
-        Button {
-          store.send(.startMeetingButtonTapped)
-        } label: {
-          Label("Start Meeting", systemImage: "timer")
-            .font(.headline)
-            .foregroundColor(.accentColor)
+        if store.syncUp.status == .active {
+          Button {
+            store.send(.startMeetingButtonTapped)
+          } label: {
+            Label("Start Meeting", systemImage: "timer")
+              .font(.headline)
+              .foregroundColor(.accentColor)
+          }
+        }
+        HStack {
+          Label("Status", systemImage: "circle.fill")
+          Spacer()
+          StatusBadge(status: store.syncUp.status)
         }
         HStack {
           Label("Length", systemImage: "clock")
@@ -170,6 +217,34 @@ struct SyncUpDetailView: View {
         }
       } header: {
         Text("Attendees")
+      }
+
+      Section {
+        switch store.syncUp.status {
+        case .draft:
+          Button {
+            store.send(.activateButtonTapped)
+          } label: {
+            Label("Activate Sync-up", systemImage: "checkmark.circle")
+          }
+          .foregroundColor(.green)
+        case .active:
+          Button {
+            store.send(.archiveButtonTapped)
+          } label: {
+            Label("Archive Sync-up", systemImage: "archivebox")
+          }
+          .foregroundColor(.orange)
+        case .archived:
+          Button {
+            store.send(.unarchiveButtonTapped)
+          } label: {
+            Label("Unarchive Sync-up", systemImage: "arrow.uturn.backward")
+          }
+          .foregroundColor(.blue)
+        }
+      } header: {
+        Text("Status Actions")
       }
 
       Section {
@@ -222,6 +297,19 @@ extension AlertState where Action == SyncUpDetail.Destination.Alert {
     }
   } message: {
     TextState("Are you sure you want to delete this meeting?")
+  }
+
+  static let needsAttendees = Self {
+    TextState("No Attendees")
+  } actions: {
+    ButtonState(action: .needsAttendees) {
+      TextState("Add Attendee")
+    }
+    ButtonState(role: .cancel) {
+      TextState("Cancel")
+    }
+  } message: {
+    TextState("You need at least one attendee with a name to activate this sync-up.")
   }
 
   static let speechRecognitionDenied = Self {
