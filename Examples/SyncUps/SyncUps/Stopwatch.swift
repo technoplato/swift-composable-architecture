@@ -323,7 +323,7 @@ extension StopwatchItem {
     id: StopwatchItem.ID(UUID()),
     title: "Meeting",
     elapsedMilliseconds: 120_000,
-    isRunning: true,
+    isRunning: false,
     lastStartTime: Date()
   )
 }

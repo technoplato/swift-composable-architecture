@@ -31,6 +31,7 @@ struct SyncUpsList {
     case saveSyncUpButtonTapped
   }
 
+  @Dependency(\.date.now) var now
   @Dependency(\.uuid) var uuid
 
   var body: some ReducerOf<Self> {
@@ -39,7 +40,9 @@ struct SyncUpsList {
       case .addStopwatchButtonTapped:
         let newStopwatch = StopwatchItem(
           id: StopwatchItem.ID(uuid()),
-          title: "Stopwatch \(state.stopwatches.count + 1)"
+          title: "Stopwatch \(state.stopwatches.count + 1)",
+          isRunning: true,
+          lastStartTime: now
         )
         state.$stopwatches.withLock { _ = $0.append(newStopwatch) }
         return .none
