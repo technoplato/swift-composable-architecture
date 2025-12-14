@@ -218,7 +218,6 @@ struct UndoReducerTests {
 
     #expect(store.state.past.count == historyLimit)
     #expect(store.state.past.first?.count == 2)  // Oldest is count=2
-    #expect(store.state.past.last?.count == 4)   // Newest is count=4
+    #expect(store.state.past.last?.count == 4)  // Newest is count=4
   }
 }
-

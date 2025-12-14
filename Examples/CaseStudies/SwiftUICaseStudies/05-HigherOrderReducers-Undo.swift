@@ -226,4 +226,3 @@ struct UndoCounterDemoView: View {
     )
   }
 }
-

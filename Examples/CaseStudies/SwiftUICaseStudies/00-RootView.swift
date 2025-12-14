@@ -209,6 +209,20 @@ struct RootView: View {
               UndoCounterDemoView(store: store)
             }
           }
+          NavigationLink("Undo/Redo + Storage") {
+            Demo(
+              store: Store(
+                initialState: PersistableUndoReducer<PersistableCounterFeature>.State(
+                  present: PersistableCounterFeature.State(),
+                  persistTo: .documentsDirectory.appending(component: "undo-counter-history.json")
+                )
+              ) {
+                PersistableUndoReducer(feature: PersistableCounterFeature())
+              }
+            ) { store in
+              UndoWithStorageDemoView(store: store)
+            }
+          }
         } header: {
           Text("Higher-order reducers")
         }
