@@ -198,6 +198,17 @@ struct RootView: View {
               NestedView(store: store)
             }
           }
+          NavigationLink("Undo/Redo") {
+            Demo(
+              store: Store(
+                initialState: UndoReducer<Counter>.State(present: Counter.State())
+              ) {
+                UndoReducer(feature: Counter())
+              }
+            ) { store in
+              UndoCounterDemoView(store: store)
+            }
+          }
         } header: {
           Text("Higher-order reducers")
         }
