@@ -22,6 +22,61 @@ struct StopwatchItem: Equatable, Identifiable, Codable {
   }
 }
 
+// MARK: - StopwatchItem Mutation Methods
+// These methods encapsulate state transitions for stopwatches.
+// Reducers call these via `state.$stopwatch.withLock { $0.toggle(now:) }`.
+// Pattern source: TCA case study SharedStateFileStorage (Stats.increment/decrement)
+
+extension StopwatchItem {
+  /// Toggles between running and paused states.
+  mutating func toggle(now: Date) {
+    if isRunning {
+      elapsedMilliseconds = currentElapsedMilliseconds(now: now)
+      lastStartTime = nil
+      isRunning = false
+    } else {
+      lastStartTime = now
+      isRunning = true
+    }
+  }
+
+  /// Resets elapsed time to zero and stops the stopwatch.
+  mutating func reset() {
+    elapsedMilliseconds = 0
+    lastStartTime = nil
+    isRunning = false
+  }
+
+  /// Pauses the stopwatch if running. No-op if already paused.
+  mutating func pause(now: Date) {
+    guard isRunning else { return }
+    elapsedMilliseconds = currentElapsedMilliseconds(now: now)
+    lastStartTime = nil
+    isRunning = false
+  }
+}
+
+// MARK: - IdentifiedArrayOf<StopwatchItem> Helpers
+
+extension IdentifiedArrayOf where Element == StopwatchItem {
+  /// Pauses all running stopwatches except the favorite and an optional "keep running" ID.
+  /// Used to enforce the single-playback constraint for non-favorites.
+  mutating func pauseAllNonFavorites(
+    except keepRunning: StopwatchItem.ID?,
+    favoriteID: StopwatchItem.ID?,
+    now: Date
+  ) {
+    for index in indices {
+      let id = self[index].id
+      guard id != favoriteID,         // Don't pause favorite
+            id != keepRunning,        // Don't pause the one we're about to start
+            self[index].isRunning     // Only pause if running
+      else { continue }
+      self[index].pause(now: now)
+    }
+  }
+}
+
 // MARK: - Shared Key for Stopwatches List
 
 extension SharedKey where Self == FileStorageKey<IdentifiedArrayOf<StopwatchItem>>.Default {
@@ -38,108 +93,110 @@ extension SharedKey where Self == FileStorageKey<StopwatchItem.ID?>.Default {
   }
 }
 
+// MARK: - Shared Key for Last Played Local Stopwatch ID
+
+extension SharedKey where Self == InMemoryKey<StopwatchItem.ID?>.Default {
+  static var lastPlayedLocalStopwatchID: Self {
+    Self[.inMemory("lastPlayedLocalStopwatchID"), default: nil]
+  }
+}
+
 // MARK: - Stopwatch Detail Reducer
+/// A display-only feature for showing stopwatch details.
+///
+/// This reducer is intentionally minimal - it only handles display updates via a timer.
+/// All control actions (play/pause, delete, favorite) are handled by the floating controls,
+/// which overlay every screen and provide a consistent control surface.
+///
+/// ## Architecture Decision
+///
+/// The detail view is **display-only** because:
+/// 1. Floating controls provide consistent UX across all screens
+/// 2. Controls adapt based on navigation context (handled by FloatingStopwatchControls)
+/// 3. Avoids duplicate control logic between detail and floating controls
+///
+/// ## Example
+///
+/// ```swift
+/// // Navigate to detail - controls appear via floating overlay
+/// state.destination = .stopwatchDetail(
+///   StopwatchDetail.State(stopwatch: sharedStopwatch)
+/// )
+/// ```
 
 @Reducer
 struct StopwatchDetail {
   @ObservableState
   struct State: Equatable {
+    /// The stopwatch being displayed.
     @Shared var stopwatch: StopwatchItem
+    
+    /// Current display value in milliseconds (updated by timer).
     var displayMilliseconds: Int = 0
   }
 
   enum Action {
-    case deleteButtonTapped
+    /// Called when the view appears.
     case onAppear
-    case pauseButtonTapped
-    case resetButtonTapped
-    case startButtonTapped
+    /// Timer tick to update display.
     case timerTicked
   }
 
   @Dependency(\.continuousClock) var clock
   @Dependency(\.date.now) var now
-  @Dependency(\.dismiss) var dismiss
 
   private enum CancelID { case timer }
 
   var body: some ReducerOf<Self> {
     Reduce { state, action in
       switch action {
-      case .deleteButtonTapped:
-        let deletedID = state.stopwatch.id
-        @Shared(.stopwatches) var stopwatches
-        @Shared(.favoriteStopwatchID) var favoriteStopwatchID
-
-        // If deleting the favorite, auto-select next
-        if favoriteStopwatchID == deletedID {
-          let currentIndex = stopwatches.firstIndex(where: { $0.id == deletedID })
-          var nextID: StopwatchItem.ID? = nil
-
-          if let index = currentIndex {
-            if index + 1 < stopwatches.count {
-              nextID = stopwatches[index + 1].id
-            } else if index > 0 {
-              nextID = stopwatches[index - 1].id
-            }
-          }
-          $favoriteStopwatchID.withLock { $0 = nextID }
-        }
-
-        $stopwatches.withLock { _ = $0.remove(id: deletedID) }
-        return .run { _ in await dismiss() }
-
       case .onAppear:
         state.displayMilliseconds = state.stopwatch.currentElapsedMilliseconds(now: now)
         guard state.stopwatch.isRunning else { return .none }
-        return .run { send in
-          for await _ in clock.timer(interval: .milliseconds(10)) {
-            await send(.timerTicked)
-          }
-        }
-        .cancellable(id: CancelID.timer, cancelInFlight: true)
-
-      case .pauseButtonTapped:
-        let currentTime = now
-        state.$stopwatch.withLock { stopwatch in
-          stopwatch.elapsedMilliseconds = stopwatch.currentElapsedMilliseconds(now: currentTime)
-          stopwatch.lastStartTime = nil
-          stopwatch.isRunning = false
-        }
-        state.displayMilliseconds = state.stopwatch.elapsedMilliseconds
-        return .cancel(id: CancelID.timer)
-
-      case .resetButtonTapped:
-        state.$stopwatch.withLock { stopwatch in
-          stopwatch.elapsedMilliseconds = 0
-          stopwatch.lastStartTime = nil
-          stopwatch.isRunning = false
-        }
-        state.displayMilliseconds = 0
-        return .none
-
-      case .startButtonTapped:
-        let currentTime = now
-        state.$stopwatch.withLock { stopwatch in
-          stopwatch.lastStartTime = currentTime
-          stopwatch.isRunning = true
-        }
-        return .run { send in
-          for await _ in clock.timer(interval: .milliseconds(10)) {
-            await send(.timerTicked)
-          }
-        }
-        .cancellable(id: CancelID.timer, cancelInFlight: true)
+        return timerEffect()
 
       case .timerTicked:
         state.displayMilliseconds = state.stopwatch.currentElapsedMilliseconds(now: now)
+        // If stopwatch stopped (externally via floating controls), cancel timer
+        if !state.stopwatch.isRunning {
+          return .cancel(id: CancelID.timer)
+        }
         return .none
       }
     }
   }
+
+  private func timerEffect() -> Effect<Action> {
+    .run { send in
+      for await _ in clock.timer(interval: .milliseconds(10)) {
+        await send(.timerTicked)
+      }
+    }
+    .cancellable(id: CancelID.timer, cancelInFlight: true)
+  }
 }
 
 // MARK: - Stopwatch Detail View
+/// A display-only view showing stopwatch details.
+///
+/// This view intentionally has **no control buttons**. All controls are provided
+/// by the floating controls overlay, which adapts based on whether this is a
+/// favorite or non-favorite stopwatch.
+///
+/// ## What's Shown
+///
+/// - Large elapsed time display (hours:minutes:seconds.milliseconds)
+/// - Running indicator (green dot when running)
+/// - Title in navigation bar
+///
+/// ## Controls
+///
+/// The floating controls (FloatingStopwatchControlsView) provide:
+/// - Play/pause for this stopwatch
+/// - Delete (if favorite)
+/// - Unfavorite (if favorite)
+/// - Jump to favorite (if viewing non-favorite and favorite exists)
+/// - Create new favorite (if viewing non-favorite and no favorite exists)
 
 struct StopwatchDetailView: View {
   let store: StoreOf<StopwatchDetail>
@@ -148,67 +205,103 @@ struct StopwatchDetailView: View {
     VStack(spacing: 48) {
       Spacer()
 
+      // Large time display
       StopwatchDisplay(milliseconds: store.displayMilliseconds)
-
-      Spacer()
-
-      HStack(spacing: 32) {
-        // Reset button (only when paused and has time)
-        if !store.stopwatch.isRunning && store.displayMilliseconds > 0 {
-          Button {
-            store.send(.resetButtonTapped)
-          } label: {
-            ZStack {
-              Circle()
-                .fill(Color(.systemGray5))
-                .frame(width: 80, height: 80)
-              Text("Reset")
-                .font(.system(size: 17, weight: .medium))
-                .foregroundColor(.primary)
-            }
-          }
-        } else {
-          // Placeholder for layout
+      
+      // Running indicator
+      if store.stopwatch.isRunning {
+        HStack(spacing: 8) {
           Circle()
-            .fill(Color.clear)
-            .frame(width: 80, height: 80)
-        }
-
-        // Start/Pause button
-        Button {
-          if store.stopwatch.isRunning {
-            store.send(.pauseButtonTapped)
-          } else {
-            store.send(.startButtonTapped)
-          }
-        } label: {
-          ZStack {
-            Circle()
-              .fill(store.stopwatch.isRunning ? Color.orange : Color.green)
-              .frame(width: 80, height: 80)
-            Image(systemName: store.stopwatch.isRunning ? "pause.fill" : "play.fill")
-              .font(.system(size: 32))
-              .foregroundColor(.white)
-          }
+            .fill(Color.green)
+            .frame(width: 10, height: 10)
+          Text("Running")
+            .font(.subheadline)
+            .foregroundColor(.secondary)
         }
       }
 
       Spacer()
-
-      // Delete button
-      Button(role: .destructive) {
-        store.send(.deleteButtonTapped)
-      } label: {
-        Text("Delete Stopwatch")
-          .frame(maxWidth: .infinity)
-      }
-      .buttonStyle(.bordered)
-      .padding(.horizontal)
+      
+      // Note about controls
+      Text("Use floating controls below")
+        .font(.caption)
+        .foregroundColor(.secondary)
+        .padding(.bottom, 80)  // Space for floating controls
     }
     .padding()
     .navigationTitle(store.stopwatch.title.isEmpty ? "Stopwatch" : store.stopwatch.title)
     .navigationBarTitleDisplayMode(.inline)
     .task { await store.send(.onAppear).finish() }
+  }
+}
+
+// MARK: - Stopwatch Detail View (TimelineView Version)
+/// An alternative detail view that uses TimelineView instead of a reducer-managed timer.
+///
+/// This approach is simpler and fixes the bug where navigating via the floating bar
+/// shows 0 seconds because `.onAppear` doesn't fire on destination replacement.
+///
+/// ## Why TimelineView is Better Here
+///
+/// 1. **No reducer state needed** - The view computes display time on demand
+/// 2. **No timer effects** - SwiftUI handles the animation loop efficiently
+/// 3. **Automatically pauses** - When stopwatch.isRunning is false, no updates
+/// 4. **Works with navigation** - No dependency on onAppear/onDisappear lifecycle
+///
+/// The stopwatch model already stores `elapsedMilliseconds` + `lastStartTime`,
+/// so we just call `currentElapsedMilliseconds(now:)` each frame.
+
+struct StopwatchDetailViewV2: View {
+  @Shared var stopwatch: StopwatchItem
+  @Shared(.favoriteStopwatchID) var favoriteStopwatchID
+  
+  private var isFavorite: Bool {
+    favoriteStopwatchID == stopwatch.id
+  }
+
+  var body: some View {
+    TimelineView(.animation(minimumInterval: 0.01, paused: !stopwatch.isRunning)) { context in
+      let currentMs = stopwatch.currentElapsedMilliseconds(now: context.date)
+      
+      VStack(spacing: 48) {
+        Spacer()
+
+        // Large time display
+        StopwatchDisplay(milliseconds: currentMs)
+        
+        // Running indicator
+        HStack(spacing: 8) {
+          if stopwatch.isRunning {
+            Circle()
+              .fill(Color.green)
+              .frame(width: 10, height: 10)
+            Text("Running")
+              .font(.subheadline)
+              .foregroundColor(.secondary)
+          }
+          
+          // Favorite indicator
+          if isFavorite {
+            Image(systemName: "star.fill")
+              .foregroundColor(.yellow)
+            Text("Favorite")
+              .font(.subheadline)
+              .foregroundColor(.secondary)
+          }
+        }
+
+        Spacer()
+        
+        // Note about controls
+        Text("Use floating controls below")
+          .font(.caption)
+          .foregroundColor(.secondary)
+          .padding(.bottom, 80)  // Space for floating controls
+      }
+      .padding()
+    }
+    .navigationTitle(stopwatch.title.isEmpty ? "Stopwatch" : stopwatch.title)
+    .navigationBarTitleDisplayMode(.inline)
   }
 }
 
@@ -252,11 +345,16 @@ struct StopwatchDisplay: View {
   }
 }
 
-// MARK: - Stopwatch Card (for list, uses @Shared directly with TimelineView)
+// MARK: - Stopwatch Card (Pure View with Closures)
+// This is a pure view component that reads @Shared state for display
+// and calls closures for interactions. The parent (SyncUpsList) handles
+// the actual business logic via reducer actions.
 
 struct StopwatchCard: View {
   @Shared var stopwatch: StopwatchItem
   @Shared(.favoriteStopwatchID) var favoriteStopwatchID
+  let onToggle: () -> Void
+  let onFavorite: () -> Void
 
   private var isFavorite: Bool {
     favoriteStopwatchID == stopwatch.id
@@ -283,18 +381,15 @@ struct StopwatchCard: View {
           Spacer()
 
           // Favorite button
-          Button {
-            setAsFavorite()
-          } label: {
+          Button(action: onFavorite) {
             Image(systemName: isFavorite ? "star.fill" : "star")
               .font(.system(size: 24))
               .foregroundColor(isFavorite ? .yellow : .secondary)
           }
           .buttonStyle(.plain)
 
-          Button {
-            toggleStopwatch()
-          } label: {
+          // Toggle button
+          Button(action: onToggle) {
             Image(systemName: stopwatch.isRunning ? "pause.circle.fill" : "play.circle.fill")
               .font(.system(size: 32))
               .foregroundColor(stopwatch.isRunning ? .orange : .green)
@@ -303,26 +398,8 @@ struct StopwatchCard: View {
         }
       }
       .padding()
-    }
-  }
-
-  private func setAsFavorite() {
-    $favoriteStopwatchID.withLock { $0 = stopwatch.id }
-  }
-
-  private func toggleStopwatch() {
-    @Dependency(\.date.now) var now
-    $stopwatch.withLock { state in
-      if state.isRunning {
-        // Pause
-        state.elapsedMilliseconds = state.currentElapsedMilliseconds(now: now)
-        state.lastStartTime = nil
-        state.isRunning = false
-      } else {
-        // Start
-        state.lastStartTime = now
-        state.isRunning = true
-      }
+      // Make the entire card area tappable, not just the text content
+      .contentShape(Rectangle())
     }
   }
 }
@@ -416,7 +493,15 @@ extension StopwatchItem {
 
 #Preview("Stopwatch Card") {
   List {
-    StopwatchCard(stopwatch: Shared(value: .mock))
-    StopwatchCard(stopwatch: Shared(value: .runningMock))
+    StopwatchCard(
+      stopwatch: Shared(value: .mock),
+      onToggle: {},
+      onFavorite: {}
+    )
+    StopwatchCard(
+      stopwatch: Shared(value: .runningMock),
+      onToggle: {},
+      onFavorite: {}
+    )
   }
 }
