@@ -187,3 +187,5 @@ After completing setup:
 3. **Wire up Intents** to modify @Shared state
 4. **Add deep link handling** in App.swift using AppRouter
 5. **Write integration tests** for ActivityKitClient
+
+
