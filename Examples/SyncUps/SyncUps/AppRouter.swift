@@ -42,6 +42,11 @@
    2. Bidirectionality - can both parse URLs and generate them
    3. Testability - easy to unit test routing logic
    4. Consistency - same router used for widgets, Live Activities, and universal links
+
+ NOTE (Michael):
+   I have no idea what's going on with the ParserPrinter conformance for Tagged<UUID>.
+   The agent wrote this and I need to understand it better before shipping.
+   The TaggedUUIDParser struct is a workaround for Tagged not conforming to ParserPrinter.
 */
 
 import Foundation
@@ -116,7 +121,9 @@ enum AppRoute: Equatable {
 ///
 /// Parsing is O(n) where n is the number of routes. With only 4 routes,
 /// this is effectively O(1) for practical purposes.
-let appRouter = OneOf {
+// Note: nonisolated(unsafe) is used because the router is stateless and thread-safe,
+// but Swift 6's strict concurrency checking can't prove this automatically.
+nonisolated(unsafe) let appRouter = OneOf {
   // GET /stopwatches/new-favorite (must come before /stopwatches/:id)
   Route(.case(AppRoute.createFavorite)) {
     Path { "stopwatches"; "new-favorite" }
@@ -130,7 +137,7 @@ let appRouter = OneOf {
   // GET /stopwatches/:id
   Route(.case(AppRoute.stopwatchDetail)) {
     Path { "stopwatches" }
-    Path { StopwatchItem.ID.parser() }
+    Path { TaggedUUIDParser<StopwatchItem>() }
   }
   
   // GET /stopwatches (root)
@@ -141,13 +148,37 @@ let appRouter = OneOf {
 
 // MARK: - Tagged UUID Parser
 
-/// Parser for `Tagged<StopwatchItem, UUID>` to enable type-safe ID parsing.
+/// A custom parser for `Tagged<Tag, UUID>` types.
 ///
-/// This extension allows the router to parse UUID strings directly into
-/// the strongly-typed `StopwatchItem.ID` (which is `Tagged<StopwatchItem, UUID>`).
-extension Tagged: ParserPrinter where RawValue == UUID {
-  public var body: some ParserPrinter<Substring.UTF8View, Self> {
-    UUID.parser().map(.memberwise(Self.init(rawValue:)))
+/// swift-url-routing needs types to conform to `ParserPrinter` to be used in routes.
+/// `Tagged` doesn't have this conformance out of the box, so we create a wrapper
+/// that parses UUID strings and wraps them in the Tagged type.
+///
+/// ## How it works
+///
+/// 1. `parse`: Takes a URL path segment like "123e4567-e89b-12d3-a456-426614174000",
+///    parses it as a UUID, then wraps it in `Tagged<Tag, UUID>`
+///
+/// 2. `print`: Takes a `Tagged<Tag, UUID>`, extracts the raw UUID, and prints it
+///    back to a URL path segment
+///
+/// ## Example
+///
+/// ```swift
+/// // In a route definition:
+/// Path { TaggedUUIDParser<StopwatchItem>() }
+///
+/// // Parses: /stopwatches/123e4567-... → StopwatchItem.ID(UUID(...))
+/// // Prints: StopwatchItem.ID(UUID(...)) → /stopwatches/123e4567-...
+/// ```
+struct TaggedUUIDParser<Tag>: ParserPrinter {
+  func parse(_ input: inout Substring.UTF8View) throws -> Tagged<Tag, UUID> {
+    let uuid = try UUID.parser().parse(&input)
+    return Tagged<Tag, UUID>(rawValue: uuid)
+  }
+  
+  func print(_ output: Tagged<Tag, UUID>, into input: inout Substring.UTF8View) throws {
+    try UUID.parser().print(output.rawValue, into: &input)
   }
 }
 

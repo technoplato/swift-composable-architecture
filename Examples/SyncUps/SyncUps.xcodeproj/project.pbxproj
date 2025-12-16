@@ -14,6 +14,12 @@
 		94D1BF372EF1361100F0E841 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 94D1BF362EF1361100F0E841 /* WidgetKit.framework */; };
 		94D1BF392EF1361100F0E841 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 94D1BF382EF1361100F0E841 /* SwiftUI.framework */; };
 		94D1BF482EF1361300F0E841 /* StopwatchWidgetsExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 94D1BF352EF1361100F0E841 /* StopwatchWidgetsExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		94D1BF592EF1394000F0E841 /* StopwatchAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94E2FD3E2EF130EA008F8990 /* StopwatchAttributes.swift */; };
+		94D1BF5A2EF1394000F0E841 /* Stopwatch+SharedKeys.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94E2FD3D2EF130EA008F8990 /* Stopwatch+SharedKeys.swift */; };
+		94D1BF5B2EF1395100F0E841 /* Stopwatch.swift in Sources */ = {isa = PBXBuildFile; fileRef = 944753612EED4E2A00C611DF /* Stopwatch.swift */; };
+		94D1BF5D2EF1398000F0E841 /* ComposableArchitecture in Frameworks */ = {isa = PBXBuildFile; productRef = 94D1BF5C2EF1398000F0E841 /* ComposableArchitecture */; };
+		94D1BF602EF13B3B00F0E841 /* URLRouting in Frameworks */ = {isa = PBXBuildFile; productRef = 94D1BF5F2EF13B3B00F0E841 /* URLRouting */; };
+		94D1BF622EF13BCD00F0E841 /* Tagged in Frameworks */ = {isa = PBXBuildFile; productRef = 94D1BF612EF13BCD00F0E841 /* Tagged */; };
 		94E2FD342EF12D1C008F8990 /* AppFeature+LiveActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94E2FD332EF12D1C008F8990 /* AppFeature+LiveActivity.swift */; };
 		94E2FD362EF12D24008F8990 /* AppRouter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94E2FD352EF12D24008F8990 /* AppRouter.swift */; };
 		94E2FD382EF12D35008F8990 /* ActivityKitClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94E2FD372EF12D35008F8990 /* ActivityKitClient.swift */; };
@@ -119,6 +125,8 @@
 			files = (
 				94D1BF392EF1361100F0E841 /* SwiftUI.framework in Frameworks */,
 				94D1BF372EF1361100F0E841 /* WidgetKit.framework in Frameworks */,
+				94D1BF622EF13BCD00F0E841 /* Tagged in Frameworks */,
+				94D1BF5D2EF1398000F0E841 /* ComposableArchitecture in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -127,6 +135,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				DC808DB629E9C58F0072B4A9 /* Tagged in Frameworks */,
+				94D1BF602EF13B3B00F0E841 /* URLRouting in Frameworks */,
 				DC808DA329E9C4490072B4A9 /* ComposableArchitecture in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -258,6 +267,8 @@
 			);
 			name = StopwatchWidgetsExtension;
 			packageProductDependencies = (
+				94D1BF5C2EF1398000F0E841 /* ComposableArchitecture */,
+				94D1BF612EF13BCD00F0E841 /* Tagged */,
 			);
 			productName = StopwatchWidgetsExtension;
 			productReference = 94D1BF352EF1361100F0E841 /* StopwatchWidgetsExtension.appex */;
@@ -281,6 +292,7 @@
 			packageProductDependencies = (
 				DC808DA229E9C4490072B4A9 /* ComposableArchitecture */,
 				DC808DB529E9C58F0072B4A9 /* Tagged */,
+				94D1BF5F2EF13B3B00F0E841 /* URLRouting */,
 			);
 			productName = SyncUps;
 			productReference = DC808D6F29E9C3AC0072B4A9 /* SyncUps.app */;
@@ -359,6 +371,7 @@
 			mainGroup = DC808D6629E9C3AC0072B4A9;
 			packageReferences = (
 				DC808DB429E9C58F0072B4A9 /* XCRemoteSwiftPackageReference "swift-tagged" */,
+				94D1BF5E2EF13B3B00F0E841 /* XCRemoteSwiftPackageReference "swift-url-routing" */,
 			);
 			productRefGroup = DC808D7029E9C3AC0072B4A9 /* Products */;
 			projectDirPath = "";
@@ -410,6 +423,9 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				94D1BF592EF1394000F0E841 /* StopwatchAttributes.swift in Sources */,
+				94D1BF5A2EF1394000F0E841 /* Stopwatch+SharedKeys.swift in Sources */,
+				94D1BF5B2EF1395100F0E841 /* Stopwatch.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -492,7 +508,7 @@
 				);
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = co.pointfree.SyncUps.StopwatchWidgets;
+				PRODUCT_BUNDLE_IDENTIFIER = com.lustig.StopwatchDomainProxy.StopwatchWidgets;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
@@ -528,7 +544,7 @@
 				);
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = co.pointfree.SyncUps.StopwatchWidgets;
+				PRODUCT_BUNDLE_IDENTIFIER = com.lustig.StopwatchDomainProxy.StopwatchWidgets;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
@@ -664,12 +680,14 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = SyncUps/SyncUps.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 4EC72DECN9;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = SyncUps/Info.plist;
+				INFOPLIST_KEY_NSSupportsLiveActivities = YES;
 				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "To transcribe meeting notes.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
@@ -681,8 +699,9 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = co.pointfree.SyncUps;
+				PRODUCT_BUNDLE_IDENTIFIER = com.lustig.StopwatchDomainProxy;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
@@ -694,12 +713,14 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = SyncUps/SyncUps.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 4EC72DECN9;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = SyncUps/Info.plist;
+				INFOPLIST_KEY_NSSupportsLiveActivities = YES;
 				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "To transcribe meeting notes.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
@@ -711,8 +732,9 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = co.pointfree.SyncUps;
+				PRODUCT_BUNDLE_IDENTIFIER = com.lustig.StopwatchDomainProxy;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
@@ -835,6 +857,14 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
+		94D1BF5E2EF13B3B00F0E841 /* XCRemoteSwiftPackageReference "swift-url-routing" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/pointfreeco/swift-url-routing";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 0.6.2;
+			};
+		};
 		DC808DB429E9C58F0072B4A9 /* XCRemoteSwiftPackageReference "swift-tagged" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/pointfreeco/swift-tagged.git";
@@ -846,6 +876,20 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		94D1BF5C2EF1398000F0E841 /* ComposableArchitecture */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = ComposableArchitecture;
+		};
+		94D1BF5F2EF13B3B00F0E841 /* URLRouting */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 94D1BF5E2EF13B3B00F0E841 /* XCRemoteSwiftPackageReference "swift-url-routing" */;
+			productName = URLRouting;
+		};
+		94D1BF612EF13BCD00F0E841 /* Tagged */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = DC808DB429E9C58F0072B4A9 /* XCRemoteSwiftPackageReference "swift-tagged" */;
+			productName = Tagged;
+		};
 		DC808DA229E9C4490072B4A9 /* ComposableArchitecture */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = ComposableArchitecture;

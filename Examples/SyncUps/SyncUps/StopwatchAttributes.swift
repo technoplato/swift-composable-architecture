@@ -168,6 +168,10 @@ struct StopwatchAttributes: ActivityAttributes {
     /// what's playing alongside the recording.
     let playingNonFavoriteTitle: String?
     
+    /// Debug text for testing Live Activity updates.
+    /// Shows accumulated words when testing update flow.
+    let debugText: String?
+    
     // MARK: - Computed Properties
     
     /// Calculates the current display time in milliseconds.
@@ -208,7 +212,8 @@ extension StopwatchAttributes.ContentState {
   init(
     from stopwatch: StopwatchItem,
     hasFavorite: Bool,
-    playingNonFavorite: StopwatchItem?
+    playingNonFavorite: StopwatchItem?,
+    debugText: String? = nil
   ) {
     self.elapsedMilliseconds = stopwatch.elapsedMilliseconds
     self.isRunning = stopwatch.isRunning
@@ -216,6 +221,7 @@ extension StopwatchAttributes.ContentState {
     self.hasFavorite = hasFavorite
     self.hasPlayingNonFavorite = playingNonFavorite != nil
     self.playingNonFavoriteTitle = playingNonFavorite?.title
+    self.debugText = debugText
   }
 }
 
@@ -253,7 +259,8 @@ extension StopwatchAttributes.ContentState {
     lastStartTime: Date(),
     hasFavorite: true,
     hasPlayingNonFavorite: false,
-    playingNonFavoriteTitle: nil
+    playingNonFavoriteTitle: nil,
+    debugText: nil
   )
   
   /// Mock paused state for previews.
@@ -263,7 +270,8 @@ extension StopwatchAttributes.ContentState {
     lastStartTime: nil,
     hasFavorite: true,
     hasPlayingNonFavorite: false,
-    playingNonFavoriteTitle: nil
+    playingNonFavoriteTitle: nil,
+    debugText: nil
   )
   
   /// Mock dual-mode state (recording + playback) for previews.
@@ -273,7 +281,8 @@ extension StopwatchAttributes.ContentState {
     lastStartTime: Date(),
     hasFavorite: true,
     hasPlayingNonFavorite: true,
-    playingNonFavoriteTitle: "Reference Audio"
+    playingNonFavoriteTitle: "Reference Audio",
+    debugText: nil
   )
 }
 

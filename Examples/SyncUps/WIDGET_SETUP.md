@@ -74,17 +74,21 @@ For **both** SyncUps and StopwatchWidgets targets:
 ### 5. Add Files to Targets
 
 #### Main App (SyncUps):
+
 - Right-click SyncUps folder → Add Files to "SyncUps"
 - Select all new `.swift` files in `SyncUps/`
 - Ensure "SyncUps" target is checked
 
 #### Widget Extension (StopwatchWidgets):
+
 - Right-click StopwatchWidgets folder → Add Files to "SyncUps"
 - Select all `.swift` files in `StopwatchWidgets/`
 - Ensure "StopwatchWidgetsExtension" target is checked
 
 #### Shared Files:
+
 For `StopwatchAttributes.swift`, `Stopwatch.swift`, `Stopwatch+SharedKeys.swift`:
+
 - Select file in Project Navigator
 - In File Inspector (right panel), under "Target Membership"
 - Check BOTH "SyncUps" and "StopwatchWidgetsExtension"
@@ -183,5 +187,3 @@ After completing setup:
 3. **Wire up Intents** to modify @Shared state
 4. **Add deep link handling** in App.swift using AppRouter
 5. **Write integration tests** for ActivityKitClient
-
-

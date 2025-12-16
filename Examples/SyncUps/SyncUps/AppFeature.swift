@@ -117,6 +117,10 @@ struct AppFeature {
     /// The ID of the most recently played non-favorite stopwatch (in-memory only).
     @Shared(.lastPlayedLocalStopwatchID) var lastPlayedLocalStopwatchID
     
+    /// The ID of the currently active Live Activity, if any.
+    /// Stored in App Group so the widget can check if an activity exists.
+    @Shared(.activeLiveActivityID) var activeLiveActivityID: String?
+    
     // MARK: - Computed Properties
     
     /// Returns the ID of the stopwatch currently being viewed in detail, if any.
@@ -168,6 +172,13 @@ struct AppFeature {
     
     /// User deleted stopwatches from the list.
     case deleteStopwatches(IndexSet)
+    
+    /// Actions related to Live Activity management.
+    case liveActivity(LiveActivity)
+    
+    /// Debug: Test Live Activity updates by sending words one at a time.
+    case debugTestLiveActivityUpdates
+    case _debugSendNextWord(sentence: String, wordIndex: Int)
   }
   
   /// Actions that can occur on individual stopwatch cards in the list.
@@ -304,6 +315,41 @@ struct AppFeature {
         
       case .destination:
         return .none
+        
+      // MARK: - Live Activity Actions
+      // Handled by LiveActivityReducer (composed separately)
+      case .liveActivity:
+        return .none
+        
+      // MARK: - Debug Actions
+      case .debugTestLiveActivityUpdates:
+        // 9 words over ~5 seconds = ~0.5 seconds per word
+        let sentence = "The quick brown fox jumps over the lazy dog"
+        return .send(._debugSendNextWord(sentence: sentence, wordIndex: 0))
+        
+      case let ._debugSendNextWord(sentence, wordIndex):
+        let words = sentence.split(separator: " ").map(String.init)
+        guard wordIndex < words.count else {
+          print("🎬 Debug: Finished sending all words!")
+          return .none
+        }
+        
+        // Build the accumulated string (words 0...wordIndex)
+        let accumulatedWords = words.prefix(wordIndex + 1).joined(separator: " ")
+        print("🎬 Debug: Sending word \(wordIndex + 1)/\(words.count): '\(accumulatedWords)'")
+        
+        // Update the favorite stopwatch's title to show progress
+        if let favoriteID = state.favoriteStopwatchID {
+          state.$stopwatches.withLock { items in
+            items[id: favoriteID]?.title = accumulatedWords
+          }
+        }
+        
+        // Schedule next word after 0.5 seconds (9 words in ~4.5 seconds)
+        return .run { send in
+          try await Task.sleep(for: .milliseconds(500))
+          await send(._debugSendNextWord(sentence: sentence, wordIndex: wordIndex + 1))
+        }
       }
     }
     // Tree-based navigation: use ifLet instead of forEach
@@ -412,6 +458,29 @@ struct StopwatchListView: View {
   
   var body: some View {
     List {
+      // Debug section for testing Live Activity updates
+      Section {
+        Button {
+          store.send(.debugTestLiveActivityUpdates)
+        } label: {
+          HStack {
+            Image(systemName: "ant.circle.fill")
+              .foregroundStyle(.orange)
+            Text("Test Live Activity Updates")
+            Spacer()
+            Text("Sends words 1/sec")
+              .font(.caption)
+              .foregroundStyle(.secondary)
+          }
+        }
+        .disabled(store.favoriteStopwatchID == nil)
+      } header: {
+        Text("Debug")
+      } footer: {
+        Text("Requires a favorite stopwatch. Updates the title word-by-word to test if Live Activity receives updates.")
+          .font(.caption2)
+      }
+      
       Section {
         ForEach(Array(store.$stopwatches)) { $stopwatch in
           let id = stopwatch.id

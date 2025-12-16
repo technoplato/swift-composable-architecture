@@ -29,7 +29,10 @@
 */
 
 import AppIntents
+import IdentifiedCollections
+import Sharing
 import SwiftUI
+import Tagged
 import WidgetKit
 
 // MARK: - Widget Definition
@@ -109,8 +112,11 @@ struct StopwatchWidgetEntry: TimelineEntry {
 /// Reads from @Shared state to get current stopwatch information.
 /// Updates timeline when stopwatch state changes.
 struct StopwatchTimelineProvider: TimelineProvider {
-  // TODO: Read from @Shared state via App Group
-  // For now, return placeholder data
+  /// Read stopwatches from App Group shared storage.
+  @Shared(.stopwatches) var stopwatches
+  
+  /// Read favorite stopwatch ID from App Group shared storage.
+  @Shared(.favoriteStopwatchID) var favoriteStopwatchID
   
   func placeholder(in context: Context) -> StopwatchWidgetEntry {
     .placeholder
@@ -123,19 +129,51 @@ struct StopwatchTimelineProvider: TimelineProvider {
       return
     }
     
-    // TODO: Read actual state from @Shared
-    completion(.empty())
+    // Read actual state from @Shared
+    let entry = createEntry(date: Date())
+    completion(entry)
   }
   
   func getTimeline(in context: Context, completion: @escaping (Timeline<StopwatchWidgetEntry>) -> Void) {
-    // TODO: Read from @Shared state
-    // For now, return empty timeline that refreshes in 15 minutes
-    let entry = StopwatchWidgetEntry.empty()
-    let timeline = Timeline(
-      entries: [entry],
-      policy: .after(Date().addingTimeInterval(15 * 60))
-    )
+    let now = Date()
+    let entry = createEntry(date: now)
+    
+    // Determine refresh policy based on running state
+    let refreshPolicy: TimelineReloadPolicy
+    if let favorite = entry.favoriteStopwatch, favorite.isRunning {
+      // If running, refresh more frequently to update the display
+      // Note: For truly live updates, use Live Activity instead
+      refreshPolicy = .after(now.addingTimeInterval(60))
+    } else {
+      // If not running, refresh less frequently
+      refreshPolicy = .after(now.addingTimeInterval(15 * 60))
+    }
+    
+    let timeline = Timeline(entries: [entry], policy: refreshPolicy)
     completion(timeline)
+  }
+  
+  /// Creates a timeline entry from current shared state.
+  private func createEntry(date: Date) -> StopwatchWidgetEntry {
+    // Find the favorite stopwatch
+    let favoriteStopwatch: StopwatchItem?
+    if let favoriteID = favoriteStopwatchID {
+      favoriteStopwatch = stopwatches[id: favoriteID]
+    } else {
+      favoriteStopwatch = nil
+    }
+    
+    // Find any playing non-favorite
+    let playingNonFavorite = stopwatches.first { stopwatch in
+      stopwatch.isRunning && stopwatch.id != favoriteStopwatchID
+    }
+    
+    return StopwatchWidgetEntry(
+      date: date,
+      favoriteStopwatch: favoriteStopwatch,
+      hasPlayingNonFavorite: playingNonFavorite != nil,
+      playingNonFavoriteTitle: playingNonFavorite?.title
+    )
   }
 }
 
@@ -144,25 +182,40 @@ struct StopwatchTimelineProvider: TimelineProvider {
 /// The main view for the stopwatch widget.
 ///
 /// Adapts layout based on widget family (size).
+/// Tapping the widget opens the app and navigates to the favorite stopwatch.
 struct StopwatchWidgetEntryView: View {
   @Environment(\.widgetFamily) var family
   let entry: StopwatchWidgetEntry
   
-  var body: some View {
-    switch family {
-    case .systemSmall:
-      SmallWidgetView(entry: entry)
-    case .systemMedium:
-      MediumWidgetView(entry: entry)
-    case .systemLarge:
-      LargeWidgetView(entry: entry)
-    case .accessoryCircular:
-      CircularAccessoryView(entry: entry)
-    case .accessoryRectangular:
-      RectangularAccessoryView(entry: entry)
-    default:
-      SmallWidgetView(entry: entry)
+  /// Deep link URL for tapping the widget.
+  /// If a favorite exists, links to that stopwatch's detail.
+  /// Otherwise, links to the stopwatch list.
+  private var deepLinkURL: URL {
+    if let stopwatch = entry.favoriteStopwatch {
+      return URL(string: "syncups://stopwatches/\(stopwatch.id.rawValue.uuidString)")!
+    } else {
+      return URL(string: "syncups://stopwatches")!
     }
+  }
+  
+  var body: some View {
+    Group {
+      switch family {
+      case .systemSmall:
+        SmallWidgetView(entry: entry)
+      case .systemMedium:
+        MediumWidgetView(entry: entry)
+      case .systemLarge:
+        LargeWidgetView(entry: entry)
+      case .accessoryCircular:
+        CircularAccessoryView(entry: entry)
+      case .accessoryRectangular:
+        RectangularAccessoryView(entry: entry)
+      default:
+        SmallWidgetView(entry: entry)
+      }
+    }
+    .widgetURL(deepLinkURL)
   }
 }
 
@@ -194,10 +247,18 @@ struct SmallWidgetView: View {
         
         Spacer()
         
-        // Time display
-        Text(formatTime(stopwatch.currentElapsedMilliseconds(now: entry.date)))
-          .font(.system(size: 28, weight: .medium, design: .monospaced))
-          .minimumScaleFactor(0.5)
+        // Time display - use Text(timerInterval:) for live updates when running
+        if stopwatch.isRunning, let startTime = stopwatch.lastStartTime {
+          let baseTime = TimeInterval(stopwatch.elapsedMilliseconds) / 1000.0
+          let adjustedStart = startTime.addingTimeInterval(-baseTime)
+          Text(timerInterval: adjustedStart...Date.distantFuture, countsDown: false)
+            .font(.system(size: 28, weight: .medium, design: .monospaced))
+            .minimumScaleFactor(0.5)
+        } else {
+          Text(formatTime(stopwatch.elapsedMilliseconds))
+            .font(.system(size: 28, weight: .medium, design: .monospaced))
+            .minimumScaleFactor(0.5)
+        }
         
         Spacer()
         
@@ -261,9 +322,18 @@ struct MediumWidgetView: View {
             }
           }
           
-          Text(formatTime(stopwatch.currentElapsedMilliseconds(now: entry.date)))
-            .font(.system(size: 36, weight: .medium, design: .monospaced))
-            .minimumScaleFactor(0.5)
+          // Time display - use Text(timerInterval:) for live updates when running
+          if stopwatch.isRunning, let startTime = stopwatch.lastStartTime {
+            let baseTime = TimeInterval(stopwatch.elapsedMilliseconds) / 1000.0
+            let adjustedStart = startTime.addingTimeInterval(-baseTime)
+            Text(timerInterval: adjustedStart...Date.distantFuture, countsDown: false)
+              .font(.system(size: 36, weight: .medium, design: .monospaced))
+              .minimumScaleFactor(0.5)
+          } else {
+            Text(formatTime(stopwatch.elapsedMilliseconds))
+              .font(.system(size: 36, weight: .medium, design: .monospaced))
+              .minimumScaleFactor(0.5)
+          }
           
           if entry.hasPlayingNonFavorite, let title = entry.playingNonFavoriteTitle {
             Text("Playing: \(title)")
@@ -349,10 +419,18 @@ struct LargeWidgetView: View {
         
         Spacer()
         
-        // Large time display
-        Text(formatTime(stopwatch.currentElapsedMilliseconds(now: entry.date)))
-          .font(.system(size: 56, weight: .thin, design: .monospaced))
-          .minimumScaleFactor(0.5)
+        // Large time display - use Text(timerInterval:) for live updates when running
+        if stopwatch.isRunning, let startTime = stopwatch.lastStartTime {
+          let baseTime = TimeInterval(stopwatch.elapsedMilliseconds) / 1000.0
+          let adjustedStart = startTime.addingTimeInterval(-baseTime)
+          Text(timerInterval: adjustedStart...Date.distantFuture, countsDown: false)
+            .font(.system(size: 56, weight: .thin, design: .monospaced))
+            .minimumScaleFactor(0.5)
+        } else {
+          Text(formatTime(stopwatch.elapsedMilliseconds))
+            .font(.system(size: 56, weight: .thin, design: .monospaced))
+            .minimumScaleFactor(0.5)
+        }
         
         Spacer()
         
@@ -445,13 +523,19 @@ struct CircularAccessoryView: View {
         }
         
         VStack(spacing: 0) {
-          // Compact time (MM:SS)
-          let ms = stopwatch.currentElapsedMilliseconds(now: entry.date)
-          let minutes = (ms % 3_600_000) / 60_000
-          let seconds = (ms % 60_000) / 1_000
-          
-          Text(String(format: "%d:%02d", minutes, seconds))
-            .font(.system(size: 16, weight: .semibold, design: .monospaced))
+          // Compact time - use Text(timerInterval:) for live updates when running
+          if stopwatch.isRunning, let startTime = stopwatch.lastStartTime {
+            let baseTime = TimeInterval(stopwatch.elapsedMilliseconds) / 1000.0
+            let adjustedStart = startTime.addingTimeInterval(-baseTime)
+            Text(timerInterval: adjustedStart...Date.distantFuture, countsDown: false)
+              .font(.system(size: 16, weight: .semibold, design: .monospaced))
+          } else {
+            let ms = stopwatch.elapsedMilliseconds
+            let minutes = (ms % 3_600_000) / 60_000
+            let seconds = (ms % 60_000) / 1_000
+            Text(String(format: "%d:%02d", minutes, seconds))
+              .font(.system(size: 16, weight: .semibold, design: .monospaced))
+          }
         }
       }
     } else {
@@ -485,8 +569,16 @@ struct RectangularAccessoryView: View {
             .font(.caption2)
             .foregroundStyle(.secondary)
           
-          Text(formatTime(stopwatch.currentElapsedMilliseconds(now: entry.date)))
-            .font(.system(size: 18, weight: .semibold, design: .monospaced))
+          // Time display - use Text(timerInterval:) for live updates when running
+          if stopwatch.isRunning, let startTime = stopwatch.lastStartTime {
+            let baseTime = TimeInterval(stopwatch.elapsedMilliseconds) / 1000.0
+            let adjustedStart = startTime.addingTimeInterval(-baseTime)
+            Text(timerInterval: adjustedStart...Date.distantFuture, countsDown: false)
+              .font(.system(size: 18, weight: .semibold, design: .monospaced))
+          } else {
+            Text(formatTime(stopwatch.elapsedMilliseconds))
+              .font(.system(size: 18, weight: .semibold, design: .monospaced))
+          }
         }
         
         Spacer()

@@ -77,21 +77,9 @@ extension IdentifiedArrayOf where Element == StopwatchItem {
   }
 }
 
-// MARK: - Shared Key for Stopwatches List
-
-extension SharedKey where Self == FileStorageKey<IdentifiedArrayOf<StopwatchItem>>.Default {
-  static var stopwatches: Self {
-    Self[.fileStorage(.documentsDirectory.appending(component: "stopwatches.json")), default: []]
-  }
-}
-
-// MARK: - Shared Key for Favorite Stopwatch ID
-
-extension SharedKey where Self == FileStorageKey<StopwatchItem.ID?>.Default {
-  static var favoriteStopwatchID: Self {
-    Self[.fileStorage(.documentsDirectory.appending(component: "favorite-stopwatch-id.json")), default: nil]
-  }
-}
+// MARK: - Shared Keys
+// Note: .stopwatches and .favoriteStopwatchID are defined in Stopwatch+SharedKeys.swift
+// using App Group storage for widget extension access.
 
 // MARK: - Shared Key for Last Played Local Stopwatch ID
 

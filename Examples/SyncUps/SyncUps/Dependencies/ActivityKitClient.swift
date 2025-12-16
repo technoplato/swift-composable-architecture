@@ -50,7 +50,7 @@
    4. Compile-time safety - @DependencyClient generates unimplemented stubs
 */
 
-import ActivityKit
+@preconcurrency import ActivityKit
 import ComposableArchitecture
 import Foundation
 
@@ -180,7 +180,7 @@ struct ActivityKitClient: Sendable {
   /// - Returns: AsyncStream of activity states
   var observeActivityState: @Sendable (
     _ activityID: String
-  ) -> AsyncStream<ActivityState> = { _ in .finished }
+  ) async -> AsyncStream<ActivityState> = { _ in .finished }
 }
 
 // MARK: - DependencyKey Conformance
@@ -195,7 +195,15 @@ extension ActivityKitClient: DependencyKey {
     
     return Self(
       start: { attributes, contentState in
+        print("[ActivityKitClient] 🚀 start() called")
+        print("   attributes.stopwatchID: \(attributes.stopwatchID)")
+        print("   attributes.title: \(attributes.title)")
+        print("   contentState.isRunning: \(contentState.isRunning)")
+        print("   contentState.elapsedMilliseconds: \(contentState.elapsedMilliseconds)")
+        print("   areActivitiesEnabled: \(ActivityAuthorizationInfo().areActivitiesEnabled)")
+        
         guard ActivityAuthorizationInfo().areActivitiesEnabled else {
+          print("[ActivityKitClient] ❌ Activities disabled!")
           throw ActivityKitClientError.activitiesDisabled
         }
         
@@ -205,68 +213,62 @@ extension ActivityKitClient: DependencyKey {
           relevanceScore: 100  // High priority for active recording
         )
         
-        let activity = try Activity.request(
-          attributes: attributes,
-          content: content,
-          pushType: nil  // Local updates only for now
-        )
-        
-        await activitiesActor.track(activity)
-        return activity.id
+        let activityID = try await activitiesActor.start(attributes: attributes, content: content)
+        print("[ActivityKitClient] ✅ Activity started with ID: \(activityID)")
+        return activityID
       },
       
       update: { activityID, contentState in
-        guard let activity = await activitiesActor.activity(for: activityID) else {
-          throw ActivityKitClientError.activityNotFound(activityID)
-        }
+        print("[ActivityKitClient] 📝 update() called")
+        print("   activityID: \(activityID)")
+        print("   contentState.isRunning: \(contentState.isRunning)")
+        print("   contentState.elapsedMilliseconds: \(contentState.elapsedMilliseconds)")
+        print("   contentState.lastStartTime: \(String(describing: contentState.lastStartTime))")
         
         let content = ActivityContent(
           state: contentState,
           staleDate: nil
         )
         
-        await activity.update(content)
+        let found = await activitiesActor.update(activityID, with: content)
+        if !found {
+          print("[ActivityKitClient] ❌ Activity not found for update!")
+          throw ActivityKitClientError.activityNotFound(activityID)
+        }
+        print("[ActivityKitClient] ✅ Activity updated successfully")
       },
       
       end: { activityID, finalContentState, dismissalPolicy in
-        guard let activity = await activitiesActor.activity(for: activityID) else {
-          throw ActivityKitClientError.activityNotFound(activityID)
-        }
+        print("[ActivityKitClient] 🛑 end() called")
+        print("   activityID: \(activityID)")
         
         let finalContent = finalContentState.map { state in
           ActivityContent(state: state, staleDate: nil)
         }
         
-        await activity.end(finalContent, dismissalPolicy: dismissalPolicy)
-        await activitiesActor.remove(activityID)
+        let found = await activitiesActor.end(activityID, content: finalContent, dismissalPolicy: dismissalPolicy)
+        if !found {
+          print("[ActivityKitClient] ❌ Activity not found for end!")
+          throw ActivityKitClientError.activityNotFound(activityID)
+        }
+        print("[ActivityKitClient] ✅ Activity ended successfully")
       },
       
       areActivitiesEnabled: {
-        ActivityAuthorizationInfo().areActivitiesEnabled
+        let enabled = ActivityAuthorizationInfo().areActivitiesEnabled
+        print("[ActivityKitClient] areActivitiesEnabled: \(enabled)")
+        return enabled
       },
       
       activeActivityIDs: {
-        Activity<StopwatchAttributes>.activities.map(\.id)
+        let ids = Activity<StopwatchAttributes>.activities.map(\.id)
+        print("[ActivityKitClient] activeActivityIDs: \(ids)")
+        return ids
       },
       
       observeActivityState: { activityID in
-        AsyncStream { continuation in
-          Task {
-            guard let activity = await activitiesActor.activity(for: activityID) else {
-              continuation.finish()
-              return
-            }
-            
-            for await state in activity.activityStateUpdates {
-              continuation.yield(state)
-              if state == .dismissed || state == .ended {
-                continuation.finish()
-                return
-              }
-            }
-            continuation.finish()
-          }
-        }
+        print("[ActivityKitClient] observeActivityState() called for: \(activityID)")
+        return await activitiesActor.observeStateUpdates(activityID)
       }
     )
   }()
@@ -309,23 +311,116 @@ extension DependencyValues {
 ///
 /// ActivityKit requires holding references to Activity objects
 /// for updates and ending. This actor provides safe concurrent access.
+/// Actor to manage Live Activity lifecycle.
+///
+/// All Activity operations happen within this actor to avoid sendability issues.
+/// Activity<T> is not Sendable, so we keep all references isolated here.
 private actor ActivityTracker {
   private var activities: [String: Activity<StopwatchAttributes>] = [:]
   
-  func track(_ activity: Activity<StopwatchAttributes>) {
+  /// Starts a new activity and tracks it. Returns the activity ID.
+  func start(
+    attributes: StopwatchAttributes,
+    content: ActivityContent<StopwatchAttributes.ContentState>
+  ) throws -> String {
+    let activity = try Activity.request(
+      attributes: attributes,
+      content: content,
+      pushType: nil  // Local updates only for now
+    )
     activities[activity.id] = activity
+    return activity.id
   }
   
-  func activity(for id: String) -> Activity<StopwatchAttributes>? {
-    // Also check system's activities in case we lost track
-    if let tracked = activities[id] {
-      return tracked
+  /// Updates an activity's content state. Returns true if found and updated.
+  func update(_ id: String, with content: ActivityContent<StopwatchAttributes.ContentState>) async -> Bool {
+    print("[ActivityTracker] update() - looking for activity: \(id)")
+    print("   tracked activities: \(activities.keys.joined(separator: ", "))")
+    print("   system activities: \(Activity<StopwatchAttributes>.activities.map(\.id).joined(separator: ", "))")
+    
+    guard let activity = findActivity(for: id) else {
+      print("[ActivityTracker] ❌ Activity not found!")
+      return false
     }
-    return Activity<StopwatchAttributes>.activities.first { $0.id == id }
+    
+    print("[ActivityTracker] ✅ Found activity, calling activity.update()")
+    print("   activity.id: \(activity.id)")
+    print("   activity.activityState: \(activity.activityState)")
+    
+    await activity.update(content)
+    
+    print("[ActivityTracker] ✅ activity.update() completed")
+    return true
+  }
+  
+  /// Ends an activity. Returns true if found and ended.
+  func end(_ id: String, content: ActivityContent<StopwatchAttributes.ContentState>?, dismissalPolicy: ActivityUIDismissalPolicy) async -> Bool {
+    guard let activity = findActivity(for: id) else { return false }
+    await activity.end(content, dismissalPolicy: dismissalPolicy)
+    activities.removeValue(forKey: id)
+    return true
+  }
+  
+  /// Observes state updates for an activity.
+  /// Returns an AsyncStream that yields ActivityState values.
+  func observeStateUpdates(_ id: String) -> AsyncStream<ActivityState> {
+    guard let activity = findActivity(for: id) else {
+      return .finished
+    }
+    
+    // Capture activity ID to look up fresh each iteration
+    let activityID = id
+    
+    return AsyncStream { [weak self] continuation in
+      let task = Task { [weak self] in
+        // Re-fetch activity within the task to avoid sendability issues
+        guard let tracker = self else {
+          continuation.finish()
+          return
+        }
+        
+        // We need to observe from within the actor
+        await tracker.observeActivityStateInternal(activityID, continuation: continuation)
+      }
+      
+      continuation.onTermination = { _ in
+        task.cancel()
+      }
+    }
+  }
+  
+  /// Internal method to observe activity state, called from within actor isolation.
+  private func observeActivityStateInternal(_ id: String, continuation: AsyncStream<ActivityState>.Continuation) async {
+    guard let activity = findActivity(for: id) else {
+      continuation.finish()
+      return
+    }
+    
+    for await state in activity.activityStateUpdates {
+      continuation.yield(state)
+      if state == .dismissed || state == .ended {
+        continuation.finish()
+        return
+      }
+    }
+    continuation.finish()
+  }
+  
+  func exists(_ id: String) -> Bool {
+    findActivity(for: id) != nil
   }
   
   func remove(_ id: String) {
     activities.removeValue(forKey: id)
+  }
+  
+  private func findActivity(for id: String) -> Activity<StopwatchAttributes>? {
+    // Check tracked activities first
+    if let tracked = activities[id] {
+      return tracked
+    }
+    // Also check system's activities in case we lost track
+    return Activity<StopwatchAttributes>.activities.first { $0.id == id }
   }
 }
 

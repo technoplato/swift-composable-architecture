@@ -12,7 +12,7 @@ import WidgetKit
 struct StopwatchWidgetsControl: ControlWidget {
     var body: some ControlWidgetConfiguration {
         StaticControlConfiguration(
-            kind: "co.pointfree.SyncUps.StopwatchWidgets",
+            kind: "com.lustig.StopwatchDomainProxy",
             provider: Provider()
         ) { value in
             ControlWidgetToggle(

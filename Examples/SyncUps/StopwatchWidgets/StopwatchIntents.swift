@@ -28,9 +28,23 @@
    For Live Activities, intents must conform to LiveActivityIntent.
 */
 
+import ActivityKit
 import AppIntents
 import Foundation
+import IdentifiedCollections
+import os
+import Sharing
+import Tagged
 import WidgetKit
+
+private let logger = Logger(subsystem: "com.syncups.widgets", category: "LiveActivity")
+
+// Also use print for easier debugging in Xcode console
+private func debugLog(_ message: String) {
+  print("[StopwatchIntent] \(message)")
+  // Use .public privacy to see values in Console.app
+  logger.debug("\(message, privacy: .public)")
+}
 
 // MARK: - Toggle Stopwatch Intent
 
@@ -59,21 +73,57 @@ struct ToggleStopwatchIntent: LiveActivityIntent {
   }
   
   func perform() async throws -> some IntentResult {
-    // TODO: Access @Shared state via App Group and toggle
-    // For now, this is a placeholder that will be implemented
-    // when App Group is configured
+    debugLog("🎯 ToggleStopwatchIntent.perform() - ID: \(self.stopwatchID)")
     
     guard let uuid = UUID(uuidString: stopwatchID) else {
+      debugLog("❌ Invalid stopwatch ID: \(self.stopwatchID)")
       throw IntentError.invalidStopwatchID
     }
     
-    // Toggle the stopwatch in shared state
-    // @Shared(.stopwatches) var stopwatches
-    // stopwatches[id: StopwatchItem.ID(uuid)]?.toggle(now: Date())
+    // Access @Shared state via App Group and toggle
+    @Shared(.stopwatches) var stopwatches
+    @Shared(.favoriteStopwatchID) var favoriteStopwatchID
+    
+    debugLog("   Stopwatches count: \(stopwatches.count)")
+    debugLog("   Favorite ID: \(favoriteStopwatchID?.rawValue.uuidString ?? "nil")")
+    
+    let id = StopwatchItem.ID(uuid)
+    let now = Date()
+    
+    // Toggle the stopwatch and capture the new state
+    var updatedStopwatch: StopwatchItem?
+    $stopwatches.withLock { items in
+      let beforeState = items[id: id]
+      debugLog("   Before toggle - isRunning: \(beforeState?.isRunning ?? false)")
+      
+      items[id: id]?.toggle(now: now)
+      updatedStopwatch = items[id: id]
+      
+      debugLog("   After toggle - isRunning: \(updatedStopwatch?.isRunning ?? false)")
+    }
+    
+    // Update Live Activity directly with the captured state
+    if let stopwatch = updatedStopwatch {
+      debugLog("✅ Captured updated stopwatch, updating Live Activity...")
+      
+      // Find playing non-favorite
+      let playingNonFavorite = stopwatches.first { sw in
+        sw.isRunning && sw.id != favoriteStopwatchID
+      }
+      
+      await updateLiveActivityForStopwatch(
+        stopwatch,
+        hasFavorite: favoriteStopwatchID != nil,
+        playingNonFavorite: playingNonFavorite
+      )
+    } else {
+      debugLog("⚠️ No stopwatch found with ID: \(uuid.uuidString)")
+    }
     
     // Invalidate widget timeline to refresh UI
     WidgetCenter.shared.reloadTimelines(ofKind: "StopwatchWidget")
     
+    debugLog("✅ ToggleStopwatchIntent completed")
     return .result()
   }
 }
@@ -103,8 +153,17 @@ struct UnfavoriteStopwatchIntent: LiveActivityIntent {
   }
   
   func perform() async throws -> some IntentResult {
-    // TODO: Clear favoriteStopwatchID in @Shared state
-    // @Shared(.favoriteStopwatchID) var favoriteStopwatchID = nil
+    // Clear favoriteStopwatchID in @Shared state
+    @Shared(.favoriteStopwatchID) var favoriteStopwatchID
+    
+    $favoriteStopwatchID.withLock { $0 = nil }
+    
+    // End all Live Activities since there's no longer a favorite
+    await endAllStopwatchActivities()
+    
+    // Clear the stored activity ID
+    @Shared(.activeLiveActivityID) var activeLiveActivityID
+    $activeLiveActivityID.withLock { $0 = nil }
     
     // Invalidate widget timeline
     WidgetCenter.shared.reloadTimelines(ofKind: "StopwatchWidget")
@@ -128,14 +187,30 @@ struct CreateFavoriteIntent: AppIntent {
   /// Opens the app after creating the stopwatch.
   static var openAppWhenRun: Bool = true
   
-  func perform() async throws -> some IntentResult {
-    // TODO: Create new stopwatch and set as favorite
-    // This will trigger the main app to start a Live Activity
+  func perform() async throws -> some IntentResult & OpensIntent {
+    // Create new stopwatch
+    @Shared(.stopwatches) var stopwatches
+    @Shared(.favoriteStopwatchID) var favoriteStopwatchID
     
-    // The app will handle this via deep link
-    // For now, just open the app with a create-favorite route
+    let newID = StopwatchItem.ID(UUID())
+    let now = Date()
     
-    return .result()
+    let newStopwatch = StopwatchItem(
+      id: newID,
+      title: "Stopwatch \(stopwatches.count + 1)",
+      isRunning: true,
+      lastStartTime: now
+    )
+    
+    $stopwatches.withLock { _ = $0.append(newStopwatch) }
+    $favoriteStopwatchID.withLock { $0 = newID }
+    
+    // Invalidate widget timeline
+    WidgetCenter.shared.reloadTimelines(ofKind: "StopwatchWidget")
+    
+    // Open the app and navigate to the new stopwatch
+    let url = URL(string: "syncups://stopwatches/\(newID.rawValue.uuidString)")!
+    return .result(opensIntent: OpenURLIntent(url))
   }
 }
 
@@ -165,19 +240,14 @@ struct NavigateToStopwatchIntent: AppIntent {
     self.stopwatchID = stopwatchID
   }
   
-  func perform() async throws -> some IntentResult {
-    // The app will receive this via onOpenURL or scene delegate
-    // and navigate to the stopwatch detail
-    
-    // Generate the deep link URL
+  func perform() async throws -> some IntentResult & OpensIntent {
     guard let uuid = UUID(uuidString: stopwatchID) else {
       throw IntentError.invalidStopwatchID
     }
     
-    // The URL will be: syncups://stopwatches/{uuid}
-    // This is handled by AppRouter in the main app
-    
-    return .result()
+    // Generate the deep link URL: syncups://stopwatches/{uuid}
+    let url = URL(string: "syncups://stopwatches/\(uuid.uuidString)")!
+    return .result(opensIntent: OpenURLIntent(url))
   }
 }
 
@@ -216,6 +286,71 @@ struct StopwatchShortcuts: AppShortcutsProvider {
       shortTitle: "Start Recording",
       systemImageName: "record.circle"
     )
+  }
+}
+
+// MARK: - Live Activity Helpers
+
+/// Updates the Live Activity for a specific stopwatch with the given state.
+/// This avoids re-reading from @Shared which might have stale data.
+///
+/// NOTE: Widget extensions run in a separate process from the main app.
+/// Activity<T>.activities only returns activities for the current process.
+/// We must use push notifications or the main app to update activities.
+/// For now, we use a workaround: request a new activity with updated content
+/// or rely on the main app to handle updates.
+private func updateLiveActivityForStopwatch(
+  _ stopwatch: StopwatchItem,
+  hasFavorite: Bool,
+  playingNonFavorite: StopwatchItem?
+) async {
+  debugLog("🔍 updateLiveActivityForStopwatch called")
+  debugLog("   Stopwatch ID: \(stopwatch.id.rawValue.uuidString)")
+  debugLog("   isRunning: \(stopwatch.isRunning)")
+  debugLog("   elapsed: \(stopwatch.elapsedMilliseconds)")
+  debugLog("   lastStartTime: \(String(describing: stopwatch.lastStartTime))")
+  
+  // Get the activity ID from shared state
+  @Shared(.activeLiveActivityID) var activeLiveActivityID
+  
+  debugLog("   activeLiveActivityID from @Shared: \(activeLiveActivityID ?? "nil")")
+  
+  // Check local activities (this will be empty in widget extension process)
+  let localActivities = Activity<StopwatchAttributes>.activities
+  debugLog("   Local activities count: \(localActivities.count)")
+  
+  // If we have local activities (running in main app), update them
+  if let activity = localActivities.first(where: { $0.attributes.stopwatchID == stopwatch.id }) {
+    debugLog("✅ Found local activity: \(activity.id)")
+    
+    let contentState = StopwatchAttributes.ContentState(
+      from: stopwatch,
+      hasFavorite: hasFavorite,
+      playingNonFavorite: playingNonFavorite
+    )
+    
+    debugLog("   New ContentState - isRunning: \(contentState.isRunning), elapsed: \(contentState.elapsedMilliseconds)")
+    
+    let content = ActivityContent(state: contentState, staleDate: nil)
+    await activity.update(content)
+    
+    debugLog("✅ Activity.update() called successfully")
+    return
+  }
+  
+  // Widget extension can't directly update activities created by main app.
+  // The @Shared state change will be picked up by the main app, which should
+  // observe the change and update the Live Activity.
+  debugLog("ℹ️ No local activity found - state change saved to @Shared")
+  debugLog("   Main app should observe @Shared changes and update Live Activity")
+}
+
+/// Ends all Live Activities for stopwatches.
+/// Called when unfavoriting.
+private func endAllStopwatchActivities() async {
+  let activities = Activity<StopwatchAttributes>.activities
+  for activity in activities {
+    await activity.end(nil, dismissalPolicy: .immediate)
   }
 }
 

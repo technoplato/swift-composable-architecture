@@ -29,7 +29,9 @@
 */
 
 import ActivityKit
+import AppIntents
 import SwiftUI
+import Tagged
 import WidgetKit
 
 // MARK: - Live Activity Configuration
@@ -98,62 +100,66 @@ struct LockScreenView: View {
   
   var body: some View {
     HStack(spacing: 16) {
-      // Left: Info
-      VStack(alignment: .leading, spacing: 4) {
-        HStack(spacing: 6) {
-          if context.state.isRunning {
-            Circle()
-              .fill(Color.green)
-              .frame(width: 8, height: 8)
+        // Left: Info
+        VStack(alignment: .leading, spacing: 4) {
+          HStack(spacing: 6) {
+            if context.state.isRunning {
+              Circle()
+                .fill(Color.green)
+                .frame(width: 8, height: 8)
+            }
+            
+            Text("Recording")
+              .font(.caption)
+              .foregroundStyle(.secondary)
           }
           
-          Text("Recording")
-            .font(.caption)
-            .foregroundStyle(.secondary)
-        }
-        
-        Text(context.attributes.title)
-          .font(.headline)
-        
-        // Time display using TimelineView for live updates
-        TimelineView(.animation(minimumInterval: 0.1, paused: !context.state.isRunning)) { timeline in
-          Text(formatTime(context.state.currentElapsedMilliseconds(now: timeline.date)))
-            .font(.system(size: 28, weight: .medium, design: .monospaced))
-            .monospacedDigit()
-        }
-        
-        // Dual mode indicator
-        if context.state.hasPlayingNonFavorite, let title = context.state.playingNonFavoriteTitle {
-          HStack(spacing: 4) {
-            Image(systemName: "speaker.wave.2")
-              .font(.caption2)
-            Text(title)
-              .font(.caption2)
+          Text(context.attributes.title)
+            .font(.headline)
+          
+          // Debug text (shows when testing updates)
+          if let debugText = context.state.debugText {
+            Text(debugText)
+              .font(.caption)
+              .foregroundStyle(.orange)
+              .lineLimit(2)
           }
-          .foregroundStyle(.secondary)
+          
+        // Time display with HH:MM:SS.mmm format
+        LiveTimerDisplay(state: context.state, fontSize: 28)
+          
+          // Dual mode indicator
+          if context.state.hasPlayingNonFavorite, let title = context.state.playingNonFavoriteTitle {
+            HStack(spacing: 4) {
+              Image(systemName: "speaker.wave.2")
+                .font(.caption2)
+              Text(title)
+                .font(.caption2)
+            }
+            .foregroundStyle(.secondary)
+          }
         }
-      }
-      
-      Spacer()
-      
-      // Right: Controls
-      HStack(spacing: 12) {
-        // Play/Pause
-        Button(intent: ToggleStopwatchIntent(stopwatchID: context.attributes.stopwatchID.rawValue.uuidString)) {
-          Image(systemName: context.state.isRunning ? "pause.circle.fill" : "play.circle.fill")
-            .font(.system(size: 36))
-            .foregroundStyle(context.state.isRunning ? .orange : .green)
-        }
-        .buttonStyle(.plain)
         
-        // Unfavorite
-        Button(intent: UnfavoriteStopwatchIntent(stopwatchID: context.attributes.stopwatchID.rawValue.uuidString)) {
-          Image(systemName: "star.slash.fill")
-            .font(.system(size: 24))
-            .foregroundStyle(.yellow)
+        Spacer()
+        
+        // Right: Controls
+        HStack(spacing: 12) {
+          // Play/Pause
+          Button(intent: ToggleStopwatchIntent(stopwatchID: context.attributes.stopwatchID.rawValue.uuidString)) {
+            Image(systemName: context.state.isRunning ? "pause.circle.fill" : "play.circle.fill")
+              .font(.system(size: 36))
+              .foregroundStyle(context.state.isRunning ? .orange : .green)
+          }
+          .buttonStyle(.plain)
+          
+          // Unfavorite
+          Button(intent: UnfavoriteStopwatchIntent(stopwatchID: context.attributes.stopwatchID.rawValue.uuidString)) {
+            Image(systemName: "star.slash.fill")
+              .font(.system(size: 24))
+              .foregroundStyle(.yellow)
+          }
+          .buttonStyle(.plain)
         }
-        .buttonStyle(.plain)
-      }
     }
     .padding()
   }
@@ -184,15 +190,8 @@ struct CompactTrailingView: View {
   let context: ActivityViewContext<StopwatchAttributes>
   
   var body: some View {
-    TimelineView(.animation(minimumInterval: 1, paused: !context.state.isRunning)) { timeline in
-      let ms = context.state.currentElapsedMilliseconds(now: timeline.date)
-      let minutes = (ms % 3_600_000) / 60_000
-      let seconds = (ms % 60_000) / 1_000
-      
-      Text(String(format: "%d:%02d", minutes, seconds))
-        .font(.system(size: 14, weight: .semibold, design: .monospaced))
-        .monospacedDigit()
-    }
+    // Compact display: MM:SS.mmm format
+    CompactTimerDisplay(state: context.state, fontSize: 12)
   }
 }
 
@@ -268,11 +267,8 @@ struct ExpandedCenterView: View {
   let context: ActivityViewContext<StopwatchAttributes>
   
   var body: some View {
-    TimelineView(.animation(minimumInterval: 0.1, paused: !context.state.isRunning)) { timeline in
-      Text(formatTime(context.state.currentElapsedMilliseconds(now: timeline.date)))
-        .font(.system(size: 32, weight: .medium, design: .monospaced))
-        .monospacedDigit()
-    }
+    // Full display: HH:MM:SS.mmm format
+    LiveTimerDisplay(state: context.state, fontSize: 32)
   }
 }
 
@@ -310,20 +306,89 @@ struct ExpandedBottomView: View {
   }
 }
 
+// MARK: - Timer Display Components
+
+/// A timer display that uses Text(timerInterval:) for live updates when running.
+/// Shows static formatted time when paused.
+struct LiveTimerDisplay: View {
+  let state: StopwatchAttributes.ContentState
+  let fontSize: CGFloat
+  let fontWeight: Font.Weight
+  
+  init(state: StopwatchAttributes.ContentState, fontSize: CGFloat = 28, fontWeight: Font.Weight = .medium) {
+    self.state = state
+    self.fontSize = fontSize
+    self.fontWeight = fontWeight
+  }
+  
+  var body: some View {
+    if state.isRunning, let startTime = state.lastStartTime {
+      // RUNNING: Use Text(timerInterval:) for automatic live updates
+      // Calculate an "adjusted start" that accounts for previously elapsed time
+      let baseTime = TimeInterval(state.elapsedMilliseconds) / 1000.0
+      let adjustedStart = startTime.addingTimeInterval(-baseTime)
+      
+      Text(timerInterval: adjustedStart...Date.distantFuture, countsDown: false,
+           showsHours: true
+      )
+        .font(.system(size: fontSize, weight: fontWeight, design: .monospaced))
+        .monospacedDigit()
+    } else {
+      // PAUSED: Show static formatted time (HH:MM:SS.mmm)
+      Text(formatTime(state.elapsedMilliseconds))
+        .font(.system(size: fontSize, weight: fontWeight, design: .monospaced))
+        .monospacedDigit()
+    }
+  }
+}
+
+/// Compact timer display for Dynamic Island
+struct CompactTimerDisplay: View {
+  let state: StopwatchAttributes.ContentState
+  let fontSize: CGFloat
+  
+  init(state: StopwatchAttributes.ContentState, fontSize: CGFloat = 14) {
+    self.state = state
+    self.fontSize = fontSize
+  }
+  
+  var body: some View {
+    if state.isRunning, let startTime = state.lastStartTime {
+      // RUNNING: Use Text(timerInterval:) for automatic live updates
+      let baseTime = TimeInterval(state.elapsedMilliseconds) / 1000.0
+      let adjustedStart = startTime.addingTimeInterval(-baseTime)
+      
+      Text(timerInterval: adjustedStart...Date.distantFuture, countsDown: false)
+        .font(.system(size: fontSize, weight: .semibold, design: .monospaced))
+        .monospacedDigit()
+    } else {
+      // PAUSED: Show static formatted time (MM:SS.mmm)
+      Text(formatTimeCompact(state.elapsedMilliseconds))
+        .font(.system(size: fontSize, weight: .semibold, design: .monospaced))
+        .monospacedDigit()
+    }
+  }
+}
+
 // MARK: - Helpers
 
-/// Formats milliseconds as HH:MM:SS.mm or MM:SS.mm
+/// Formats milliseconds as HH:MM:SS.mmm (always showing hours, padded)
 private func formatTime(_ milliseconds: Int) -> String {
   let hours = milliseconds / 3_600_000
   let minutes = (milliseconds % 3_600_000) / 60_000
   let seconds = (milliseconds % 60_000) / 1_000
-  let cs = (milliseconds % 1_000) / 10  // Centiseconds
+  let ms = milliseconds % 1_000  // Full milliseconds
   
-  if hours > 0 {
-    return String(format: "%d:%02d:%02d.%02d", hours, minutes, seconds, cs)
-  } else {
-    return String(format: "%02d:%02d.%02d", minutes, seconds, cs)
-  }
+  return String(format: "%02d:%02d:%02d.%03d", hours, minutes, seconds, ms)
+}
+
+/// Formats milliseconds as MM:SS.mmm for compact displays
+private func formatTimeCompact(_ milliseconds: Int) -> String {
+  let minutes = (milliseconds % 3_600_000) / 60_000
+  let seconds = (milliseconds % 60_000) / 1_000
+  let ms = milliseconds % 1_000
+  
+  return String(format: "%02d:%02d.%03d", minutes, seconds, ms)
 }
 
 // MARK: - Previews

@@ -42,35 +42,46 @@ import Foundation
 
 // MARK: - Live Activity Actions
 
-extension AppFeature.Action {
-  /// Actions related to Live Activity management.
-  enum LiveActivity: Equatable {
-    /// A Live Activity was successfully started.
-    case activityStarted(id: String)
-    
-    /// A Live Activity was successfully updated.
-    case activityUpdated(id: String)
-    
-    /// A Live Activity was ended.
-    case activityEnded(id: String)
-    
-    /// An error occurred with Live Activity management.
-    case activityError(String)
-    
-    /// Deep link received from widget/Live Activity.
-    case deepLinkReceived(URL)
-  }
+/// Actions related to Live Activity management.
+///
+/// This enum is referenced by `AppFeature.Action.liveActivity(_:)` which is defined
+/// in the main `AppFeature.swift` file.
+enum LiveActivity: Equatable {
+  /// Check and restore Live Activity on app launch.
+  /// If there's a favorite but no active Live Activity, start one.
+  case checkAndRestoreOnLaunch
+  
+  /// Start observing @Shared changes from widget extension.
+  /// This should be called once when the app starts.
+  case startObservingSharedChanges
+  
+  /// Called when @Shared stopwatches changes (from widget extension or elsewhere).
+  case sharedStopwatchesChanged
+  
+  /// A Live Activity was successfully started.
+  case activityStarted(id: String)
+  
+  /// A Live Activity was successfully updated.
+  case activityUpdated(id: String)
+  
+  /// A Live Activity was ended.
+  case activityEnded(id: String)
+  
+  /// An error occurred with Live Activity management.
+  case activityError(String)
+  
+  /// Deep link received from widget/Live Activity.
+  case deepLinkReceived(URL)
 }
 
 // MARK: - Live Activity State
 
 extension AppFeature.State {
-  /// The ID of the currently active Live Activity, if any.
-  ///
-  /// Stored in App Group so the widget can check if an activity exists.
-  @Shared(.activeLiveActivityID) var activeLiveActivityID: String?
-  
   /// Returns the playing non-favorite stopwatch, if any.
+  ///
+  /// Note: `activeLiveActivityID` is defined in the main `AppFeature.State` struct
+  /// because Swift does not allow stored properties (including `@Shared` property wrappers)
+  /// in extensions.
   var playingNonFavorite: StopwatchItem? {
     stopwatches.first { stopwatch in
       stopwatch.isRunning && stopwatch.id != favoriteStopwatchID
@@ -99,9 +110,112 @@ struct LiveActivityReducer {
   @Dependency(\.activityKit) var activityKit
   @Dependency(\.date.now) var now
   
+  private enum CancelID {
+    case sharedObservation
+  }
+  
   var body: some ReducerOf<AppFeature> {
     Reduce { state, action in
       switch action {
+      // MARK: - Observe @Shared Changes from Widget Extension
+      //
+      // When the widget extension modifies @Shared(.stopwatches) via an intent,
+      // the main app's @Shared state will automatically update. We need to
+      // detect these changes and update the Live Activity accordingly.
+      //
+      // TCA's @Shared automatically triggers view updates, but we need to
+      // handle Live Activity updates explicitly here.
+        
+      // MARK: - Check and Restore on App Launch
+        
+      case .liveActivity(.checkAndRestoreOnLaunch):
+        // If there's a favorite but no active Live Activity, start one
+        print("🚀 checkAndRestoreOnLaunch called")
+        print("   favoriteStopwatchID: \(String(describing: state.favoriteStopwatchID))")
+        print("   activeLiveActivityID: \(String(describing: state.activeLiveActivityID))")
+        print("   stopwatches count: \(state.stopwatches.count)")
+        
+        // Check system activities
+        let systemActivityIDs = activityKit.activeActivityIDs()
+        print("   🔍 System active activities: \(systemActivityIDs)")
+        print("   🔍 Activities enabled: \(activityKit.areActivitiesEnabled())")
+        
+        guard state.favoriteStopwatchID != nil else {
+          print("   ❌ No favorite - skipping Live Activity")
+          return .none
+        }
+        
+        // Check if we already have an active Live Activity
+        if state.activeLiveActivityID != nil {
+          print("   📝 Activity exists, updating...")
+          // Activity exists, just update it to sync state
+          return updateLiveActivityEffect(state: state)
+        }
+        
+        print("   ✅ Starting new Live Activity...")
+        // No active activity but have a favorite - start one
+        return startLiveActivityEffect(state: state)
+        
+      case .liveActivity(.startObservingSharedChanges):
+        // Start a long-running effect that observes @Shared changes
+        // This catches changes made by the widget extension
+        print("👀 Starting to observe @Shared stopwatches changes")
+        return .run { send in
+          @Shared(.stopwatches) var stopwatches
+          
+          // Skip the first value (current state) and observe subsequent changes
+          for await _ in $stopwatches.publisher.dropFirst().values {
+            print("📱 @Shared stopwatches changed externally")
+            await send(.liveActivity(.sharedStopwatchesChanged))
+          }
+        }
+        .cancellable(id: CancelID.sharedObservation, cancelInFlight: true)
+        
+      case .liveActivity(.sharedStopwatchesChanged):
+        // @Shared state changed (likely from widget extension)
+        // Update Live Activity if we have one active
+        print("🔄 sharedStopwatchesChanged - checking if Live Activity update needed")
+        print("   activeLiveActivityID: \(String(describing: state.activeLiveActivityID))")
+        print("   favoriteStopwatchID: \(String(describing: state.favoriteStopwatchID))")
+        print("   stopwatches count: \(state.stopwatches.count)")
+        
+        // Log all stopwatches to see current state
+        for sw in state.stopwatches {
+          print("   - \(sw.id): isRunning=\(sw.isRunning), elapsed=\(sw.elapsedMilliseconds), lastStartTime=\(String(describing: sw.lastStartTime))")
+        }
+        
+        // If we have an active activity but no favorite, end the activity
+        // This handles the case where the widget extension cleared the favorite
+        if state.activeLiveActivityID != nil && state.favoriteStopwatchID == nil {
+          print("   🛑 Favorite was cleared - ending Live Activity")
+          return endLiveActivityEffect(state: state)
+        }
+        
+        guard state.activeLiveActivityID != nil,
+              let favoriteID = state.favoriteStopwatchID,
+              let stopwatch = state.stopwatches[id: favoriteID] else {
+          print("   ❌ No active activity or favorite - skipping update")
+          return .none
+        }
+        
+        print("   ✅ Updating Live Activity with new state")
+        print("   favorite stopwatch: \(stopwatch.title)")
+        print("   isRunning: \(stopwatch.isRunning)")
+        print("   elapsed: \(stopwatch.elapsedMilliseconds)")
+        print("   lastStartTime: \(String(describing: stopwatch.lastStartTime))")
+        
+        // Also log the ContentState we're about to send
+        let contentState = StopwatchAttributes.ContentState(
+          from: stopwatch,
+          hasFavorite: true,
+          playingNonFavorite: state.playingNonFavorite
+        )
+        print("   ContentState.isRunning: \(contentState.isRunning)")
+        print("   ContentState.lastStartTime: \(String(describing: contentState.lastStartTime))")
+        print("   ContentState.elapsedMilliseconds: \(contentState.elapsedMilliseconds)")
+        
+        return updateLiveActivityEffect(state: state)
+        
       // MARK: - Start Live Activity on Favorite Creation
         
       case .floatingControls(.delegate(.createAndNavigateToNewFavorite)):
@@ -200,10 +314,15 @@ struct LiveActivityReducer {
   // MARK: - Private Helpers
   
   private func startLiveActivityEffect(state: AppFeature.State) -> Effect<AppFeature.Action> {
+    print("🎬 startLiveActivityEffect called")
+    
     guard let favoriteID = state.favoriteStopwatchID,
           let stopwatch = state.stopwatches[id: favoriteID] else {
+      print("   ❌ No favorite or stopwatch not found")
       return .none
     }
+    
+    print("   Favorite stopwatch: \(stopwatch.title) (id: \(favoriteID))")
     
     return .run { [playingNonFavorite = state.playingNonFavorite] send in
       let attributes = StopwatchAttributes(from: stopwatch)
@@ -213,33 +332,56 @@ struct LiveActivityReducer {
         playingNonFavorite: playingNonFavorite
       )
       
+      print("   📤 Calling activityKit.start...")
+      
       do {
         let activityID = try await activityKit.start(attributes, contentState)
+        print("   ✅ Activity started with ID: \(activityID)")
         await send(.liveActivity(.activityStarted(id: activityID)))
       } catch {
+        print("   ❌ Activity start failed: \(error)")
         await send(.liveActivity(.activityError(error.localizedDescription)))
       }
     }
   }
   
   private func updateLiveActivityEffect(state: AppFeature.State) -> Effect<AppFeature.Action> {
+    print("📝 updateLiveActivityEffect called")
+    print("   activeLiveActivityID: \(String(describing: state.activeLiveActivityID))")
+    print("   favoriteStopwatchID: \(String(describing: state.favoriteStopwatchID))")
+    
     guard let activityID = state.activeLiveActivityID,
           let favoriteID = state.favoriteStopwatchID,
           let stopwatch = state.stopwatches[id: favoriteID] else {
+      print("   ❌ Missing required state - returning .none")
       return .none
     }
     
-    return .run { [playingNonFavorite = state.playingNonFavorite] send in
+    print("   ✅ Have all required state")
+    print("   stopwatch.isRunning: \(stopwatch.isRunning)")
+    print("   stopwatch.elapsedMilliseconds: \(stopwatch.elapsedMilliseconds)")
+    print("   stopwatch.lastStartTime: \(String(describing: stopwatch.lastStartTime))")
+    
+    return .run { [playingNonFavorite = state.playingNonFavorite, debugText = stopwatch.title] send in
       let contentState = StopwatchAttributes.ContentState(
         from: stopwatch,
         hasFavorite: true,
-        playingNonFavorite: playingNonFavorite
+        playingNonFavorite: playingNonFavorite,
+        debugText: debugText
       )
+      
+      print("   📤 Calling activityKit.update...")
+      print("   contentState.isRunning: \(contentState.isRunning)")
+      print("   contentState.elapsedMilliseconds: \(contentState.elapsedMilliseconds)")
+      print("   contentState.lastStartTime: \(String(describing: contentState.lastStartTime))")
+      print("   contentState.debugText: \(String(describing: contentState.debugText))")
       
       do {
         try await activityKit.update(activityID, contentState)
+        print("   ✅ activityKit.update succeeded")
         await send(.liveActivity(.activityUpdated(id: activityID)))
       } catch {
+        print("   ❌ activityKit.update failed: \(error)")
         await send(.liveActivity(.activityError(error.localizedDescription)))
       }
     }
@@ -323,19 +465,5 @@ struct LiveActivityReducer {
  ```
 */
 
-// MARK: - Extension for Action Equatable
-
-extension AppFeature.Action.LiveActivity {
-  static func == (lhs: Self, rhs: Self) -> Bool {
-    switch (lhs, rhs) {
-    case let (.activityStarted(l), .activityStarted(r)): return l == r
-    case let (.activityUpdated(l), .activityUpdated(r)): return l == r
-    case let (.activityEnded(l), .activityEnded(r)): return l == r
-    case let (.activityError(l), .activityError(r)): return l == r
-    case let (.deepLinkReceived(l), .deepLinkReceived(r)): return l == r
-    default: return false
-    }
-  }
-}
 
 
