@@ -12,5 +12,9 @@ struct MacrosPlugin: CompilerPlugin {
     ReducerCaseEphemeralMacro.self,
     ReducerCaseIgnoredMacro.self,
     ViewActionMacro.self,
+    // Undo action macros
+    UndoPointMacro.self,
+    UndoExcludedMacro.self,
+    UndoActionsMacro.self,
   ]
 }

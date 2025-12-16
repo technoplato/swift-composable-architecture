@@ -12,7 +12,9 @@
 		94A7A1ED2EEF4AEB00B11C84 /* 05-HigherOrderReducers-Undo.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94A7A1EC2EEF4AEB00B11C84 /* 05-HigherOrderReducers-Undo.swift */; };
 		94A7A1F02EEF4AFF00B11C84 /* 05-HigherOrderReducers-UndoTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94A7A1EF2EEF4AFF00B11C84 /* 05-HigherOrderReducers-UndoTests.swift */; };
 		94A7A1F12EF0000000B11C84 /* 05-HigherOrderReducers-UndoWithStorage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94A7A1F22EF0000000B11C84 /* 05-HigherOrderReducers-UndoWithStorage.swift */; };
+		94A7A1F32EEF8BD500B11C84 /* 05-HigherOrderReducers-SelectiveUndo.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94A7A1F12EEF8BD500B11C84 /* 05-HigherOrderReducers-SelectiveUndo.swift */; };
 		94A7A1F32EF0000000B11C84 /* 05-HigherOrderReducers-UndoWithStorageTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94A7A1F42EF0000000B11C84 /* 05-HigherOrderReducers-UndoWithStorageTests.swift */; };
+		94A7A1F72EF1000000B11C84 /* 05-HigherOrderReducers-SelectiveUndoTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94A7A1F82EF1000000B11C84 /* 05-HigherOrderReducers-SelectiveUndoTests.swift */; };
 		CA0C51FB245389CC00A04EAB /* 05-HigherOrderReducers-ReusableOfflineDownloadsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA0C51FA245389CC00A04EAB /* 05-HigherOrderReducers-ReusableOfflineDownloadsTests.swift */; };
 		CA25E5D224463AD700DA666A /* 01-GettingStarted-Bindings-Basics.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA25E5D124463AD700DA666A /* 01-GettingStarted-Bindings-Basics.swift */; };
 		CA34170824A4E89500FAF950 /* 01-GettingStarted-AnimationsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA34170724A4E89500FAF950 /* 01-GettingStarted-AnimationsTests.swift */; };
@@ -159,8 +161,10 @@
 		4F5AC11E24ECC7E4009DC50B /* 02-GettingStarted-SharedStateInMemoryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "02-GettingStarted-SharedStateInMemoryTests.swift"; sourceTree = "<group>"; };
 		94A7A1EC2EEF4AEB00B11C84 /* 05-HigherOrderReducers-Undo.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "05-HigherOrderReducers-Undo.swift"; sourceTree = "<group>"; };
 		94A7A1EF2EEF4AFF00B11C84 /* 05-HigherOrderReducers-UndoTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "05-HigherOrderReducers-UndoTests.swift"; sourceTree = "<group>"; };
+		94A7A1F12EEF8BD500B11C84 /* 05-HigherOrderReducers-SelectiveUndo.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "05-HigherOrderReducers-SelectiveUndo.swift"; sourceTree = "<group>"; };
 		94A7A1F22EF0000000B11C84 /* 05-HigherOrderReducers-UndoWithStorage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "05-HigherOrderReducers-UndoWithStorage.swift"; sourceTree = "<group>"; };
 		94A7A1F42EF0000000B11C84 /* 05-HigherOrderReducers-UndoWithStorageTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "05-HigherOrderReducers-UndoWithStorageTests.swift"; sourceTree = "<group>"; };
+		94A7A1F82EF1000000B11C84 /* 05-HigherOrderReducers-SelectiveUndoTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "05-HigherOrderReducers-SelectiveUndoTests.swift"; sourceTree = "<group>"; };
 		CA0C51FA245389CC00A04EAB /* 05-HigherOrderReducers-ReusableOfflineDownloadsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "05-HigherOrderReducers-ReusableOfflineDownloadsTests.swift"; sourceTree = "<group>"; };
 		CA25E5D124463AD700DA666A /* 01-GettingStarted-Bindings-Basics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "01-GettingStarted-Bindings-Basics.swift"; sourceTree = "<group>"; };
 		CA34170724A4E89500FAF950 /* 01-GettingStarted-AnimationsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "01-GettingStarted-AnimationsTests.swift"; sourceTree = "<group>"; };
@@ -427,6 +431,7 @@
 				DC3C87AF29A48C4D004D9104 /* 04-NavigationStack.swift */,
 				DCE63B70245CC0B90080A23D /* 05-HigherOrderReducers-Recursion.swift */,
 				DCC68EE22447C8540037F998 /* 05-HigherOrderReducers-ReusableFavoriting.swift */,
+				94A7A1F12EEF8BD500B11C84 /* 05-HigherOrderReducers-SelectiveUndo.swift */,
 				94A7A1EC2EEF4AEB00B11C84 /* 05-HigherOrderReducers-Undo.swift */,
 				94A7A1F22EF0000000B11C84 /* 05-HigherOrderReducers-UndoWithStorage.swift */,
 				DCFE195F278DBF0600C14CCF /* CaseStudiesApp.swift */,
@@ -458,6 +463,7 @@
 				CA0C51FA245389CC00A04EAB /* 05-HigherOrderReducers-ReusableOfflineDownloadsTests.swift */,
 				94A7A1EF2EEF4AFF00B11C84 /* 05-HigherOrderReducers-UndoTests.swift */,
 				94A7A1F42EF0000000B11C84 /* 05-HigherOrderReducers-UndoWithStorageTests.swift */,
+				94A7A1F82EF1000000B11C84 /* 05-HigherOrderReducers-SelectiveUndoTests.swift */,
 			);
 			path = SwiftUICaseStudiesTests;
 			sourceTree = "<group>";
@@ -783,6 +789,7 @@
 				94A7A1ED2EEF4AEB00B11C84 /* 05-HigherOrderReducers-Undo.swift in Sources */,
 				94A7A1F12EF0000000B11C84 /* 05-HigherOrderReducers-UndoWithStorage.swift in Sources */,
 				CAE962FD24A7F7BE00EFC025 /* 01-GettingStarted-AlertsAndConfirmationDialogs.swift in Sources */,
+				94A7A1F32EEF8BD500B11C84 /* 05-HigherOrderReducers-SelectiveUndo.swift in Sources */,
 				CA25E5D224463AD700DA666A /* 01-GettingStarted-Bindings-Basics.swift in Sources */,
 				DC88D8A6245341EC0077F427 /* 01-GettingStarted-Animations.swift in Sources */,
 				DC89C44D244621A5006900B9 /* 04-Navigation-NavigateAndLoad.swift in Sources */,
@@ -804,6 +811,7 @@
 				CA0C51FB245389CC00A04EAB /* 05-HigherOrderReducers-ReusableOfflineDownloadsTests.swift in Sources */,
 				94A7A1F02EEF4AFF00B11C84 /* 05-HigherOrderReducers-UndoTests.swift in Sources */,
 				94A7A1F32EF0000000B11C84 /* 05-HigherOrderReducers-UndoWithStorageTests.swift in Sources */,
+				94A7A1F72EF1000000B11C84 /* 05-HigherOrderReducers-SelectiveUndoTests.swift in Sources */,
 				DC634B252448D15B00DAA016 /* 05-HigherOrderReducers-ReusableFavoritingTests.swift in Sources */,
 				CAA9ADC824465D950003A984 /* 03-Effects-CancellationTests.swift in Sources */,
 				CA410EE2247C73B400E41798 /* 03-Effects-WebSocketTests.swift in Sources */,

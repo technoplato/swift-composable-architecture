@@ -39,6 +39,7 @@
 import ActivityKit
 import ComposableArchitecture
 import Foundation
+import WidgetKit
 
 // MARK: - Live Activity Actions
 
@@ -178,6 +179,9 @@ struct LiveActivityReducer {
         print("   activeLiveActivityID: \(String(describing: state.activeLiveActivityID))")
         print("   favoriteStopwatchID: \(String(describing: state.favoriteStopwatchID))")
         print("   stopwatches count: \(state.stopwatches.count)")
+        
+        // Also reload widgets so they show updated state
+        WidgetCenter.shared.reloadTimelines(ofKind: "StopwatchWidget")
         
         // Log all stopwatches to see current state
         for sw in state.stopwatches {

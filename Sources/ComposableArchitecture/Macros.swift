@@ -203,3 +203,82 @@ public macro ViewAction<R: Reducer>(for: R.Type) =
   #externalMacro(
     module: "ComposableArchitectureMacros", type: "ViewActionMacro"
   ) where R.Action: ViewAction
+
+// MARK: - Undo Action Macros
+
+/// Marks an action case as always creating an undo point immediately.
+///
+/// Use this macro to annotate action cases that represent significant user decisions
+/// that should always create an immediate undo point, such as deletions or imports.
+///
+/// ```swift
+/// @UndoActions
+/// enum Action {
+///   @UndoPoint case deleteItem(Item.ID)
+///   @UndoPoint case clearAll
+///   @UndoExcluded case timerTicked
+///   case regularAction  // Debounced by default
+/// }
+/// ```
+///
+/// When combined with the ``UndoActions`` macro, this generates a conformance to
+/// ``UndoActionClassification`` that returns `.createUndoPoint` for annotated cases.
+@attached(peer, names: named(_))
+public macro UndoPoint() =
+  #externalMacro(module: "ComposableArchitectureMacros", type: "UndoPointMacro")
+
+/// Marks an action case as excluded from undo history entirely.
+///
+/// Use this macro to annotate action cases that should never create an undo point,
+/// such as timer ticks, network responses, or transient UI state changes.
+///
+/// ```swift
+/// @UndoActions
+/// enum Action {
+///   @UndoPoint case deleteItem(Item.ID)
+///   @UndoExcluded case timerTicked
+///   @UndoExcluded case networkResponse(Response)
+///   case regularAction  // Debounced by default
+/// }
+/// ```
+///
+/// When combined with the ``UndoActions`` macro, this generates a conformance to
+/// ``UndoActionClassification`` that returns `.exclude` for annotated cases.
+@attached(peer, names: named(_))
+public macro UndoExcluded() =
+  #externalMacro(module: "ComposableArchitectureMacros", type: "UndoExcludedMacro")
+
+/// Generates ``UndoActionClassification`` conformance for an action enum.
+///
+/// Apply this macro to an action enum that uses ``UndoPoint()`` and ``UndoExcluded()``
+/// annotations to automatically generate the `undoBehavior` property.
+///
+/// ```swift
+/// @UndoActions
+/// enum Action {
+///   @UndoPoint case deleteItem(Item.ID)
+///   @UndoPoint case clearAll
+///   @UndoExcluded case timerTicked
+///   @UndoExcluded case networkResponse(Response)
+///   case regularAction  // Debounced by default
+/// }
+/// ```
+///
+/// This generates:
+/// ```swift
+/// extension Action: UndoActionClassification {
+///   var undoBehavior: UndoActionBehavior {
+///     switch self {
+///     case .deleteItem, .clearAll:
+///       return .createUndoPoint
+///     case .timerTicked, .networkResponse:
+///       return .exclude
+///     default:
+///       return .debounce
+///     }
+///   }
+/// }
+/// ```
+@attached(extension, conformances: UndoActionClassification)
+public macro UndoActions() =
+  #externalMacro(module: "ComposableArchitectureMacros", type: "UndoActionsMacro")

@@ -323,8 +323,9 @@ struct AppFeature {
         
       // MARK: - Debug Actions
       case .debugTestLiveActivityUpdates:
-        // 9 words over ~5 seconds = ~0.5 seconds per word
-        let sentence = "The quick brown fox jumps over the lazy dog"
+        // Longer text to test Live Activity height limits
+        // Apple limits Lock Screen Live Activities to ~160pt height
+        let sentence = "The quick brown fox jumps over the lazy dog and then runs back to fetch a stick while the cat watches from the windowsill wondering why dogs are so easily amused by such simple things"
         return .send(._debugSendNextWord(sentence: sentence, wordIndex: 0))
         
       case let ._debugSendNextWord(sentence, wordIndex):
@@ -345,11 +346,15 @@ struct AppFeature {
           }
         }
         
-        // Schedule next word after 0.5 seconds (9 words in ~4.5 seconds)
-        return .run { send in
-          try await Task.sleep(for: .milliseconds(500))
-          await send(._debugSendNextWord(sentence: sentence, wordIndex: wordIndex + 1))
-        }
+        // Trigger Live Activity update directly (publisher may not fire for same-process changes)
+        // Then schedule next word after 0.5 seconds
+        return .merge(
+          .send(.liveActivity(.sharedStopwatchesChanged)),
+          .run { send in
+            try await Task.sleep(for: .milliseconds(500))
+            await send(._debugSendNextWord(sentence: sentence, wordIndex: wordIndex + 1))
+          }
+        )
       }
     }
     // Tree-based navigation: use ifLet instead of forEach
