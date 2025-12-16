@@ -4,7 +4,7 @@
    Use the shared keys to access stopwatch state across processes.
    
    [Inputs]
-   - App Group identifier: "group.syncups.stopwatch"
+   - App Group identifier: "group.com.syncups.share"
    
    [Outputs]
    - @Shared state accessible from both app and widget extension
@@ -57,7 +57,7 @@ import Tagged
 /// 1. Select target → Signing & Capabilities
 /// 2. Add "App Groups" capability
 /// 3. Add this identifier to both targets
-let appGroupIdentifier = "group.syncups.stopwatch"
+let appGroupIdentifier = "group.com.syncups.share"
 
 /// Returns the shared container URL for the App Group.
 ///
