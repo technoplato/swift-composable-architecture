@@ -3,19 +3,27 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 56;
+	objectVersion = 70;
 	objects = {
 
 /* Begin PBXBuildFile section */
 		944753622EED4E2A00C611DF /* Stopwatch.swift in Sources */ = {isa = PBXBuildFile; fileRef = 944753612EED4E2A00C611DF /* Stopwatch.swift */; };
 		9498AF552EEFE52D007106F4 /* FloatingStopwatchControls.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9498AF542EEFE52D007106F4 /* FloatingStopwatchControls.swift */; };
-		9498AF562EEFE52D007106F4 /* FloatingStopwatchControls.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9498AF542EEFE52D007106F4 /* FloatingStopwatchControls.swift */; };
+		9498AF582EF06588007106F4 /* SmartChangeReducer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9498AF572EF06588007106F4 /* SmartChangeReducer.swift */; };
+		9498AF5A2EF06700007106F4 /* SmartChangeReducerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9498AF592EF06700007106F4 /* SmartChangeReducerTests.swift */; };
+		94D1BF372EF1361100F0E841 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 94D1BF362EF1361100F0E841 /* WidgetKit.framework */; };
+		94D1BF392EF1361100F0E841 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 94D1BF382EF1361100F0E841 /* SwiftUI.framework */; };
+		94D1BF482EF1361300F0E841 /* StopwatchWidgetsExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 94D1BF352EF1361100F0E841 /* StopwatchWidgetsExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		94E2FD342EF12D1C008F8990 /* AppFeature+LiveActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94E2FD332EF12D1C008F8990 /* AppFeature+LiveActivity.swift */; };
+		94E2FD362EF12D24008F8990 /* AppRouter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94E2FD352EF12D24008F8990 /* AppRouter.swift */; };
+		94E2FD382EF12D35008F8990 /* ActivityKitClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94E2FD372EF12D35008F8990 /* ActivityKitClient.swift */; };
+		94E2FD3F2EF130EA008F8990 /* StopwatchAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94E2FD3E2EF130EA008F8990 /* StopwatchAttributes.swift */; };
+		94E2FD402EF130EA008F8990 /* Stopwatch+SharedKeys.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94E2FD3D2EF130EA008F8990 /* Stopwatch+SharedKeys.swift */; };
 		DC7CE4E729E9E6E4006B6263 /* ding.wav in Resources */ = {isa = PBXBuildFile; fileRef = DC7CE4E629E9E6E4006B6263 /* ding.wav */; };
 		DC808D7329E9C3AC0072B4A9 /* App.swift in Sources */ = {isa = PBXBuildFile; fileRef = DC808D7229E9C3AC0072B4A9 /* App.swift */; };
 		DC808D7729E9C3AD0072B4A9 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = DC808D7629E9C3AD0072B4A9 /* Assets.xcassets */; };
 		DC808D8E29E9C3AD0072B4A9 /* SyncUpsUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = DC808D8D29E9C3AD0072B4A9 /* SyncUpsUITests.swift */; };
 		DC808DA329E9C4490072B4A9 /* ComposableArchitecture in Frameworks */ = {isa = PBXBuildFile; productRef = DC808DA229E9C4490072B4A9 /* ComposableArchitecture */; };
-		DC808DA529E9C4C70072B4A9 /* OpenSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = DC808DA429E9C4C70072B4A9 /* OpenSettings.swift */; };
 		DC808DA729E9C4D60072B4A9 /* SpeechRecognizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = DC808DA629E9C4D60072B4A9 /* SpeechRecognizer.swift */; };
 		DC808DB629E9C58F0072B4A9 /* Tagged in Frameworks */ = {isa = PBXBuildFile; productRef = DC808DB529E9C58F0072B4A9 /* Tagged */; };
 		DC80B1E929EDE5D1001CC0CC /* AppFeature.swift in Sources */ = {isa = PBXBuildFile; fileRef = DC80B1E829EDE5D1001CC0CC /* AppFeature.swift */; };
@@ -23,6 +31,13 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
+		94D1BF462EF1361300F0E841 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = DC808D6729E9C3AC0072B4A9 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 94D1BF342EF1361100F0E841;
+			remoteInfo = StopwatchWidgetsExtension;
+		};
 		DC808D8029E9C3AD0072B4A9 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = DC808D6729E9C3AC0072B4A9 /* Project object */;
@@ -39,9 +54,34 @@
 		};
 /* End PBXContainerItemProxy section */
 
+/* Begin PBXCopyFilesBuildPhase section */
+		94D1BF492EF1361300F0E841 /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				94D1BF482EF1361300F0E841 /* StopwatchWidgetsExtension.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
 /* Begin PBXFileReference section */
 		944753612EED4E2A00C611DF /* Stopwatch.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Stopwatch.swift; sourceTree = "<group>"; };
 		9498AF542EEFE52D007106F4 /* FloatingStopwatchControls.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FloatingStopwatchControls.swift; sourceTree = "<group>"; };
+		9498AF572EF06588007106F4 /* SmartChangeReducer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SmartChangeReducer.swift; sourceTree = "<group>"; };
+		9498AF592EF06700007106F4 /* SmartChangeReducerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SmartChangeReducerTests.swift; sourceTree = "<group>"; };
+		94D1BF352EF1361100F0E841 /* StopwatchWidgetsExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = StopwatchWidgetsExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		94D1BF362EF1361100F0E841 /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
+		94D1BF382EF1361100F0E841 /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
+		94D1BF562EF1373F00F0E841 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		94E2FD332EF12D1C008F8990 /* AppFeature+LiveActivity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppFeature+LiveActivity.swift"; sourceTree = "<group>"; };
+		94E2FD352EF12D24008F8990 /* AppRouter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppRouter.swift; sourceTree = "<group>"; };
+		94E2FD372EF12D35008F8990 /* ActivityKitClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivityKitClient.swift; sourceTree = "<group>"; };
+		94E2FD3D2EF130EA008F8990 /* Stopwatch+SharedKeys.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Stopwatch+SharedKeys.swift"; sourceTree = "<group>"; };
+		94E2FD3E2EF130EA008F8990 /* StopwatchAttributes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StopwatchAttributes.swift; sourceTree = "<group>"; };
 		DC43064F2AE8CF7C005AFB1E /* SyncUps.xctestplan */ = {isa = PBXFileReference; lastKnownFileType = text; path = SyncUps.xctestplan; sourceTree = "<group>"; };
 		DC7CE4E629E9E6E4006B6263 /* ding.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = ding.wav; sourceTree = "<group>"; };
 		DC808D6F29E9C3AC0072B4A9 /* SyncUps.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SyncUps.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -51,13 +91,35 @@
 		DC808D8929E9C3AD0072B4A9 /* SyncUpsUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = SyncUpsUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		DC808D8D29E9C3AD0072B4A9 /* SyncUpsUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SyncUpsUITests.swift; sourceTree = "<group>"; };
 		DC808D9C29E9C3C10072B4A9 /* swift-composable-architecture */ = {isa = PBXFileReference; lastKnownFileType = wrapper; name = "swift-composable-architecture"; path = ../..; sourceTree = "<group>"; };
-		DC808DA429E9C4C70072B4A9 /* OpenSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenSettings.swift; sourceTree = "<group>"; };
 		DC808DA629E9C4D60072B4A9 /* SpeechRecognizer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpeechRecognizer.swift; sourceTree = "<group>"; };
 		DC80B1E829EDE5D1001CC0CC /* AppFeature.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppFeature.swift; sourceTree = "<group>"; };
 		DC80B1EA29EE12A7001CC0CC /* AppFeatureTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppFeatureTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		94D1BF4C2EF1361300F0E841 /* PBXFileSystemSynchronizedBuildFileExceptionSet */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 94D1BF342EF1361100F0E841 /* StopwatchWidgetsExtension */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
+/* Begin PBXFileSystemSynchronizedRootGroup section */
+		94D1BF3A2EF1361100F0E841 /* StopwatchWidgets */ = {isa = PBXFileSystemSynchronizedRootGroup; exceptions = (94D1BF4C2EF1361300F0E841 /* PBXFileSystemSynchronizedBuildFileExceptionSet */, ); explicitFileTypes = {}; explicitFolders = (); path = StopwatchWidgets; sourceTree = "<group>"; };
+/* End PBXFileSystemSynchronizedRootGroup section */
+
 /* Begin PBXFrameworksBuildPhase section */
+		94D1BF322EF1361100F0E841 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				94D1BF392EF1361100F0E841 /* SwiftUI.framework in Frameworks */,
+				94D1BF372EF1361100F0E841 /* WidgetKit.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		DC808D6C29E9C3AC0072B4A9 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -99,6 +161,7 @@
 				DC43064F2AE8CF7C005AFB1E /* SyncUps.xctestplan */,
 				DC808DA129E9C4490072B4A9 /* Frameworks */,
 				DC808D7029E9C3AC0072B4A9 /* Products */,
+				94D1BF3A2EF1361100F0E841 /* StopwatchWidgets */,
 				DC808D7129E9C3AC0072B4A9 /* SyncUps */,
 				DC808D8229E9C3AD0072B4A9 /* SyncUpsTests */,
 				DC808D8C29E9C3AD0072B4A9 /* SyncUpsUITests */,
@@ -111,6 +174,7 @@
 				DC808D6F29E9C3AC0072B4A9 /* SyncUps.app */,
 				DC808D7F29E9C3AD0072B4A9 /* SyncUpsTests.xctest */,
 				DC808D8929E9C3AD0072B4A9 /* SyncUpsUITests.xctest */,
+				94D1BF352EF1361100F0E841 /* StopwatchWidgetsExtension.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -118,11 +182,17 @@
 		DC808D7129E9C3AC0072B4A9 /* SyncUps */ = {
 			isa = PBXGroup;
 			children = (
+				94D1BF562EF1373F00F0E841 /* Info.plist */,
 				DC808D9E29E9C4040072B4A9 /* Dependencies */,
 				DC808D7229E9C3AC0072B4A9 /* App.swift */,
 				DC80B1E829EDE5D1001CC0CC /* AppFeature.swift */,
+				94E2FD332EF12D1C008F8990 /* AppFeature+LiveActivity.swift */,
+				94E2FD352EF12D24008F8990 /* AppRouter.swift */,
 				9498AF542EEFE52D007106F4 /* FloatingStopwatchControls.swift */,
+				9498AF572EF06588007106F4 /* SmartChangeReducer.swift */,
 				944753612EED4E2A00C611DF /* Stopwatch.swift */,
+				94E2FD3D2EF130EA008F8990 /* Stopwatch+SharedKeys.swift */,
+				94E2FD3E2EF130EA008F8990 /* StopwatchAttributes.swift */,
 				DC808D7629E9C3AD0072B4A9 /* Assets.xcassets */,
 				DC7CE4E529E9E6E4006B6263 /* Resources */,
 			);
@@ -133,6 +203,7 @@
 			isa = PBXGroup;
 			children = (
 				DC80B1EA29EE12A7001CC0CC /* AppFeatureTests.swift */,
+				9498AF592EF06700007106F4 /* SmartChangeReducerTests.swift */,
 			);
 			path = SyncUpsTests;
 			sourceTree = "<group>";
@@ -148,7 +219,7 @@
 		DC808D9E29E9C4040072B4A9 /* Dependencies */ = {
 			isa = PBXGroup;
 			children = (
-				DC808DA429E9C4C70072B4A9 /* OpenSettings.swift */,
+				94E2FD372EF12D35008F8990 /* ActivityKitClient.swift */,
 				DC808DA629E9C4D60072B4A9 /* SpeechRecognizer.swift */,
 			);
 			path = Dependencies;
@@ -157,6 +228,8 @@
 		DC808DA129E9C4490072B4A9 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				94D1BF362EF1361100F0E841 /* WidgetKit.framework */,
+				94D1BF382EF1361100F0E841 /* SwiftUI.framework */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";
@@ -164,6 +237,28 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
+		94D1BF342EF1361100F0E841 /* StopwatchWidgetsExtension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 94D1BF4D2EF1361300F0E841 /* Build configuration list for PBXNativeTarget "StopwatchWidgetsExtension" */;
+			buildPhases = (
+				94D1BF312EF1361100F0E841 /* Sources */,
+				94D1BF322EF1361100F0E841 /* Frameworks */,
+				94D1BF332EF1361100F0E841 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				94D1BF3A2EF1361100F0E841 /* StopwatchWidgets */,
+			);
+			name = StopwatchWidgetsExtension;
+			packageProductDependencies = (
+			);
+			productName = StopwatchWidgetsExtension;
+			productReference = 94D1BF352EF1361100F0E841 /* StopwatchWidgetsExtension.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
 		DC808D6E29E9C3AC0072B4A9 /* SyncUps */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = DC808D9329E9C3AD0072B4A9 /* Build configuration list for PBXNativeTarget "SyncUps" */;
@@ -171,10 +266,12 @@
 				DC808D6B29E9C3AC0072B4A9 /* Sources */,
 				DC808D6C29E9C3AC0072B4A9 /* Frameworks */,
 				DC808D6D29E9C3AC0072B4A9 /* Resources */,
+				94D1BF492EF1361300F0E841 /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				94D1BF472EF1361300F0E841 /* PBXTargetDependency */,
 			);
 			name = SyncUps;
 			packageProductDependencies = (
@@ -228,9 +325,12 @@
 			isa = PBXProject;
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
-				LastSwiftUpdateCheck = 1430;
+				LastSwiftUpdateCheck = 2610;
 				LastUpgradeCheck = 1600;
 				TargetAttributes = {
+					94D1BF342EF1361100F0E841 = {
+						CreatedOnToolsVersion = 26.1.1;
+					};
 					DC808D6E29E9C3AC0072B4A9 = {
 						CreatedOnToolsVersion = 14.3;
 					};
@@ -263,11 +363,19 @@
 				DC808D6E29E9C3AC0072B4A9 /* SyncUps */,
 				DC808D7E29E9C3AD0072B4A9 /* SyncUpsTests */,
 				DC808D8829E9C3AD0072B4A9 /* SyncUpsUITests */,
+				94D1BF342EF1361100F0E841 /* StopwatchWidgetsExtension */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
+		94D1BF332EF1361100F0E841 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		DC808D6D29E9C3AC0072B4A9 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -294,6 +402,13 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
+		94D1BF312EF1361100F0E841 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		DC808D6B29E9C3AC0072B4A9 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -301,8 +416,13 @@
 				DC808DA729E9C4D60072B4A9 /* SpeechRecognizer.swift in Sources */,
 				DC80B1E929EDE5D1001CC0CC /* AppFeature.swift in Sources */,
 				9498AF552EEFE52D007106F4 /* FloatingStopwatchControls.swift in Sources */,
-				DC808DA529E9C4C70072B4A9 /* OpenSettings.swift in Sources */,
 				944753622EED4E2A00C611DF /* Stopwatch.swift in Sources */,
+				94E2FD3F2EF130EA008F8990 /* StopwatchAttributes.swift in Sources */,
+				94E2FD402EF130EA008F8990 /* Stopwatch+SharedKeys.swift in Sources */,
+				94E2FD362EF12D24008F8990 /* AppRouter.swift in Sources */,
+				94E2FD382EF12D35008F8990 /* ActivityKitClient.swift in Sources */,
+				94E2FD342EF12D1C008F8990 /* AppFeature+LiveActivity.swift in Sources */,
+				9498AF582EF06588007106F4 /* SmartChangeReducer.swift in Sources */,
 				DC808D7329E9C3AC0072B4A9 /* App.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -312,6 +432,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				DC80B1EB29EE12A7001CC0CC /* AppFeatureTests.swift in Sources */,
+				9498AF5A2EF06700007106F4 /* SmartChangeReducerTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -326,6 +447,11 @@
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
+		94D1BF472EF1361300F0E841 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 94D1BF342EF1361100F0E841 /* StopwatchWidgetsExtension */;
+			targetProxy = 94D1BF462EF1361300F0E841 /* PBXContainerItemProxy */;
+		};
 		DC808D8129E9C3AD0072B4A9 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = DC808D6E29E9C3AC0072B4A9 /* SyncUps */;
@@ -339,6 +465,75 @@
 /* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
+		94D1BF4A2EF1361300F0E841 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 4EC72DECN9;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = StopwatchWidgets/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = StopwatchWidgets;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.1;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = co.pointfree.SyncUps.StopwatchWidgets;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		94D1BF4B2EF1361300F0E841 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 4EC72DECN9;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = StopwatchWidgets/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = StopwatchWidgets;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.1;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = co.pointfree.SyncUps.StopwatchWidgets;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
 		DC808D9129E9C3AD0072B4A9 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -467,6 +662,7 @@
 				DEVELOPMENT_TEAM = 4EC72DECN9;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = SyncUps/Info.plist;
 				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "To transcribe meeting notes.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
@@ -495,6 +691,7 @@
 				DEVELOPMENT_TEAM = 4EC72DECN9;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = SyncUps/Info.plist;
 				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "To transcribe meeting notes.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
@@ -582,6 +779,15 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
+		94D1BF4D2EF1361300F0E841 /* Build configuration list for PBXNativeTarget "StopwatchWidgetsExtension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				94D1BF4A2EF1361300F0E841 /* Debug */,
+				94D1BF4B2EF1361300F0E841 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 		DC808D6A29E9C3AC0072B4A9 /* Build configuration list for PBXProject "SyncUps" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (

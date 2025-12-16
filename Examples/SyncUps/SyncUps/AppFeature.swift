@@ -407,22 +407,28 @@ struct AppView: View {
 struct StopwatchListView: View {
   let store: StoreOf<AppFeature>
   
+  /// Debug flag to visualize the tappable area. Set to `true` to see a pink overlay.
+  private let debugTapArea = false
+  
   var body: some View {
     List {
       Section {
         ForEach(Array(store.$stopwatches)) { $stopwatch in
           let id = stopwatch.id
-          Button {
+          StopwatchCard(
+            stopwatch: $stopwatch,
+            onToggle: { store.send(.stopwatchList(.toggleTapped(id))) },
+            onFavorite: { store.send(.stopwatchList(.favoriteTapped(id))) }
+          )
+          // Debug: visualize the tappable area (set debugTapArea = true)
+          .background(debugTapArea ? Color.pink.opacity(0.3) : Color.clear)
+          // Make the entire row tappable for navigation
+          .contentShape(Rectangle())
+          .onTapGesture {
             store.send(.stopwatchTapped(id))
-          } label: {
-            StopwatchCard(
-              stopwatch: $stopwatch,
-              onToggle: { store.send(.stopwatchList(.toggleTapped(id))) },
-              onFavorite: { store.send(.stopwatchList(.favoriteTapped(id))) }
-            )
           }
-          .buttonStyle(.plain)
           .listRowBackground(Color(.systemBackground))
+          .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 4, trailing: 16))
         }
         .onDelete { indexSet in
           store.send(.deleteStopwatches(indexSet))

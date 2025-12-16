@@ -7,7 +7,7 @@ struct SyncUpsApp: App {
   //     point each time they are run.
   static let store = Store(initialState: AppFeature.State()) {
     AppFeature()
-      ._printChanges()
+      ._printSmartChanges()
   } withDependencies: {
     if ProcessInfo.processInfo.environment["UITesting"] == "true" {
       $0.defaultFileStorage = .inMemory

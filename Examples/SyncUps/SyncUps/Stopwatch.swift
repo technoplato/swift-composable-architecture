@@ -350,6 +350,30 @@ struct StopwatchDisplay: View {
 // and calls closures for interactions. The parent (SyncUpsList) handles
 // the actual business logic via reducer actions.
 
+/// A card view displaying a stopwatch's title, elapsed time, and action buttons.
+///
+/// This is a pure view component that reads `@Shared` state for display and calls
+/// closures for interactions. The parent view handles the actual business logic.
+///
+/// ## Tap Areas
+///
+/// The card has two types of tap targets:
+/// 1. **Action buttons** (favorite, play/pause): Small circular buttons on the right
+/// 2. **Card body**: The entire card area (for navigation to detail)
+///
+/// The parent view should use `.onTapGesture` on the card for navigation, while
+/// the buttons handle their specific actions via the closures.
+///
+/// ## Example
+///
+/// ```swift
+/// StopwatchCard(
+///   stopwatch: $stopwatch,
+///   onToggle: { store.send(.toggleTapped(id)) },
+///   onFavorite: { store.send(.favoriteTapped(id)) }
+/// )
+/// .onTapGesture { store.send(.stopwatchTapped(id)) }
+/// ```
 struct StopwatchCard: View {
   @Shared var stopwatch: StopwatchItem
   @Shared(.favoriteStopwatchID) var favoriteStopwatchID
@@ -364,27 +388,33 @@ struct StopwatchCard: View {
     TimelineView(.animation(minimumInterval: 0.01, paused: !stopwatch.isRunning)) { context in
       let currentMs = stopwatch.currentElapsedMilliseconds(now: context.date)
 
-      VStack(alignment: .leading, spacing: 8) {
-        HStack {
-          Text(stopwatch.title.isEmpty ? "Stopwatch" : stopwatch.title)
-            .font(.headline)
-          Spacer()
-          if stopwatch.isRunning {
-            Circle()
-              .fill(Color.green)
-              .frame(width: 8, height: 8)
+      HStack(spacing: 12) {
+        // Left side: Title and time (tappable for navigation via parent)
+        VStack(alignment: .leading, spacing: 8) {
+          HStack {
+            Text(stopwatch.title.isEmpty ? "Stopwatch" : stopwatch.title)
+              .font(.headline)
+            if stopwatch.isRunning {
+              Circle()
+                .fill(Color.green)
+                .frame(width: 8, height: 8)
+            }
           }
-        }
-
-        HStack {
+          
           StopwatchCardDisplay(milliseconds: currentMs)
-          Spacer()
+        }
+        
+        Spacer(minLength: 0)
 
+        // Right side: Action buttons (these have their own tap handlers)
+        HStack(spacing: 8) {
           // Favorite button
           Button(action: onFavorite) {
             Image(systemName: isFavorite ? "star.fill" : "star")
               .font(.system(size: 24))
               .foregroundColor(isFavorite ? .yellow : .secondary)
+              .frame(width: 44, height: 44)
+              .contentShape(Rectangle())
           }
           .buttonStyle(.plain)
 
@@ -393,12 +423,15 @@ struct StopwatchCard: View {
             Image(systemName: stopwatch.isRunning ? "pause.circle.fill" : "play.circle.fill")
               .font(.system(size: 32))
               .foregroundColor(stopwatch.isRunning ? .orange : .green)
+              .frame(width: 44, height: 44)
+              .contentShape(Rectangle())
           }
           .buttonStyle(.plain)
         }
       }
-      .padding()
-      // Make the entire card area tappable, not just the text content
+      .padding(.vertical, 8)
+      .padding(.horizontal, 4)
+      // Ensure the entire card area registers taps (for parent's onTapGesture)
       .contentShape(Rectangle())
     }
   }

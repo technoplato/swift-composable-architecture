@@ -553,3 +553,4 @@ private func formatTime(_ milliseconds: Int) -> String {
   StopwatchWidgetEntry.placeholder
 }
 
+
